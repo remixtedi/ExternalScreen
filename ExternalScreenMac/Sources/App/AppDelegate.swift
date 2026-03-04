@@ -170,8 +170,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 await screenCaptureManager.stopCapture()
                 h264Encoder.stop()
 
-                // Update virtual display resolution
-                virtualDisplayManager.updateResolution(preset: currentPreset)
+                // Update virtual display resolution (keeps same display ID and USB connection)
+                let updated = virtualDisplayManager.updateResolution(preset: currentPreset)
+                log("restartWithNewPreset: updateResolution(\(currentPreset.description)) -> \(updated)")
 
                 // Recreate encoder and capture manager with new preset
                 h264Encoder = H264Encoder(preset: currentPreset)
@@ -179,6 +180,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
                 screenCaptureManager = ScreenCaptureManager(preset: currentPreset)
                 screenCaptureManager.delegate = self
+
+                // Reset frame counter for clean restart
+                frameNumber = 0
+                didDropFrames = false
+                usbDeviceManager.resetFlowControl()
 
                 // Restart if iPad is connected
                 if usbDeviceManager.connected {
@@ -190,10 +196,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     )
                     usbDeviceManager.sendMessage(type: .displayConfig, payload: config.toData())
 
-                    // Force keyframe for clean transition
-                    h264Encoder.forceKeyframe()
+                    // Wait for ScreenCaptureKit to detect the updated display
+                    try? await Task.sleep(nanoseconds: 500_000_000)
 
-                    // Restart capture
+                    // Restart capture and encoding
                     startCaptureAndEncoding()
                 }
 

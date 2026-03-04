@@ -25,7 +25,7 @@ class MainWindow: NSWindow {
         contentView.wantsLayer = true
 
         // Title
-        let titleLabel = NSTextField(labelWithString: "iPad External Screen")
+        let titleLabel = NSTextField(labelWithString: "External Screen")
         titleLabel.font = NSFont.boldSystemFont(ofSize: 20)
         titleLabel.frame = NSRect(x: 20, y: 260, width: 380, height: 30)
         contentView.addSubview(titleLabel)

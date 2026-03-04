@@ -94,10 +94,13 @@
     CGFloat heightMM = (CGFloat)height / (CGFloat)ppi * 25.4;
 
     // Create descriptor
+    // Use max possible resolution (Native iPad: 2388x1668) so resolution changes always work
+    NSUInteger maxWidth = width > 2388 ? width : 2388;
+    NSUInteger maxHeight = height > 1668 ? height : 1668;
     CGVirtualDisplayDescriptor *descriptor = [[NSClassFromString(@"CGVirtualDisplayDescriptor") alloc] init];
     descriptor.name = name;
-    descriptor.maxPixelsWide = width;
-    descriptor.maxPixelsHigh = height;
+    descriptor.maxPixelsWide = maxWidth;
+    descriptor.maxPixelsHigh = maxHeight;
     descriptor.sizeInMillimeters = CGSizeMake(widthMM, heightMM);
     descriptor.productID = 0x1234;
     descriptor.vendorID = 0x5678;

@@ -298,6 +298,16 @@ extension DisplayViewController: USBConnectionManagerDelegate {
 
     private func handleDisplayConfig(_ config: DisplayConfigMessage) {
         print("DisplayViewController: Display config received: \(config.width)x\(config.height) @ \(config.refreshRate)Hz")
+
+        // Reset decoder if resolution changed so it accepts new SPS/PPS
+        if let oldConfig = displayConfig,
+           oldConfig.width != config.width || oldConfig.height != config.height {
+            print("DisplayViewController: Resolution changed from \(oldConfig.width)x\(oldConfig.height) to \(config.width)x\(config.height), resetting decoder")
+            h264Decoder.reset()
+            metalRenderer?.clear()
+            frameCount = 0
+        }
+
         displayConfig = config
 
         // Update decoder frame rate for proper timing
