@@ -12,6 +12,13 @@ ExternalScreen is a macOS + iOS application that enables using an iPad as an ext
 # Initial setup (installs XcodeGen, clones PeerTalk, generates Xcode project)
 ./setup.sh
 
+# Quick build & run (preferred over raw xcodebuild)
+./run.sh           # Build, install to /Applications, and launch Mac app
+./run.sh build     # Build Mac app only (no install/run)
+./run.sh ios       # Build iOS app for connected device
+./run.sh setup     # Initial setup (team ID, dependencies, xcodegen)
+./run.sh clean     # Clean build artifacts
+
 # Regenerate Xcode project after modifying project.yml
 xcodegen generate
 
