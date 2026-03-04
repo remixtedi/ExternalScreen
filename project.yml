@@ -32,11 +32,7 @@ targets:
           - "*.plist"
         compilerFlags:
           - "-fno-objc-arc"
-    resources:
-      - path: ExternalScreenMac/Resources
-        excludes:
-          - "Info.plist"
-          - "*.entitlements"
+      - path: ExternalScreenMac/Resources/Assets.xcassets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.externalscreen.mac
@@ -71,11 +67,7 @@ targets:
           - "*.plist"
         compilerFlags:
           - "-fno-objc-arc"
-    resources:
-      - path: ExternalScreenIOS/Resources
-        excludes:
-          - "Info.plist"
-          - "*.entitlements"
+      - path: ExternalScreenIOS/Resources/Assets.xcassets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.externalscreen.ios

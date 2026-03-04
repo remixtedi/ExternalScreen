@@ -16,6 +16,7 @@
 		5E6ED740862E16EE52E16A3D /* H264Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C3AD6543F719AE380AC0C96 /* H264Decoder.swift */; };
 		65B4059064C64A5BA09F79D6 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0681FE3BFB2571EE3FFD5DE /* AppDelegate.swift */; };
 		67332D896F333D3C30F78936 /* TouchEventHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB2A5D532EA0B7C6C699FB07 /* TouchEventHandler.swift */; };
+		687DE3401F3D9C92C10A083D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ACCEFDDC511068F92542EE99 /* Assets.xcassets */; };
 		6DE052EBC29037C55C15FADD /* Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86CA5CF89C19C2F5FA6C3139 /* Protocol.swift */; };
 		730FCA0A203091580129EA5E /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18C4ED281632D7ED2C2B18C8 /* VideoToolbox.framework */; };
 		7D7D96BE69A3E83A785C5D18 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0D5AD6A0B26DFA057617F36D /* CoreMedia.framework */; };
@@ -28,6 +29,7 @@
 		94A110D4D1E806426A98E260 /* PTChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 8396764110BEFE60B9C70EE4 /* PTChannel.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		99C33D063DFBF28D7B277EA6 /* PTProtocol.m in Sources */ = {isa = PBXBuildFile; fileRef = 816C01FE9548FB5810D524B5 /* PTProtocol.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		9D9B9B242E68ED354C1401DC /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D7AAC182BD9CFA419B901DE0 /* AppKit.framework */; };
+		AB9D9EF78A437712A763BE0B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 28109E0EEE1062DF90E87BB8 /* Assets.xcassets */; };
 		AFE483D4B4ECBE4184ADE655 /* DisplayViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6F9C98DAAD8335B757DF9C0 /* DisplayViewController.swift */; };
 		B98A5FCCDD05B0D448CCD5CE /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A79D1C02BAAEC3C46802D39 /* MetalKit.framework */; };
 		BD12F5D3A9C6E950834D9FF3 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18C4ED281632D7ED2C2B18C8 /* VideoToolbox.framework */; };
@@ -52,6 +54,7 @@
 		18C4ED281632D7ED2C2B18C8 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
 		2088AAA754B57C5166B25852 /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
 		2446CA09896F968882B6F288 /* PTUSBHub.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTUSBHub.m; sourceTree = "<group>"; };
+		28109E0EEE1062DF90E87BB8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2D4BA93BD543A017CDA14CC3 /* PTUSBHub.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTUSBHub.m; sourceTree = "<group>"; };
 		3320B2DF39E0847E4793FEB4 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		3B8039B63D444EF884CF4D7C /* PTDefines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PTDefines.h; sourceTree = "<group>"; };
@@ -81,6 +84,7 @@
 		A38AE63741750230993EA26F /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		A73F60FCCF171668540A35BC /* Peertalk.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Peertalk.h; sourceTree = "<group>"; };
 		AB2A5D532EA0B7C6C699FB07 /* TouchEventHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchEventHandler.swift; sourceTree = "<group>"; };
+		ACCEFDDC511068F92542EE99 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B0681FE3BFB2571EE3FFD5DE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C29FC3E8CA0B51711DE0DA38 /* USBConnectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = USBConnectionManager.swift; sourceTree = "<group>"; };
 		C601BC53C141D3ADF6B75DAD /* VirtualDisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualDisplayManager.swift; sourceTree = "<group>"; };
@@ -163,6 +167,15 @@
 			path = ExternalScreenMac/Sources;
 			sourceTree = "<group>";
 		};
+		28EB7DED96B2DE15E9FCB59E /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				ACCEFDDC511068F92542EE99 /* Assets.xcassets */,
+			);
+			name = Resources;
+			path = ExternalScreenMac/Resources;
+			sourceTree = "<group>";
+		};
 		366235837485787AB3E5552D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -186,6 +199,15 @@
 				3320B2DF39E0847E4793FEB4 /* SceneDelegate.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		4F71E2A783EA78DE64D656F9 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				28109E0EEE1062DF90E87BB8 /* Assets.xcassets */,
+			);
+			name = Resources;
+			path = ExternalScreenIOS/Resources;
 			sourceTree = "<group>";
 		};
 		647A3EB65AED60023B3F34A3 /* Products */ = {
@@ -303,6 +325,8 @@
 			children = (
 				A2210D3C5374F7DD4646FBDB /* PeerTalk */,
 				8A25122C65CCCDD7BE18C655 /* PeerTalk */,
+				4F71E2A783EA78DE64D656F9 /* Resources */,
+				28EB7DED96B2DE15E9FCB59E /* Resources */,
 				6697D4EA58CAB12C32DDCB0D /* Shared */,
 				FE0F97D05015F793EDFFD40A /* Sources */,
 				1DA3D07963C6229356E6C0EB /* Sources */,
@@ -332,6 +356,7 @@
 			buildConfigurationList = E5CFA25EC0DE659FFD11C063 /* Build configuration list for PBXNativeTarget "ExternalScreenIOS" */;
 			buildPhases = (
 				F9F5EE1A00B85D9C16C0BA4D /* Sources */,
+				6F972A691F0EF967AA978187 /* Resources */,
 				E45F20F29E53372550D99EB4 /* Frameworks */,
 			);
 			buildRules = (
@@ -350,6 +375,7 @@
 			buildConfigurationList = AC1DF72304E30D26AFE05A63 /* Build configuration list for PBXNativeTarget "ExternalScreenMac" */;
 			buildPhases = (
 				7095EFFA6EF6D4DC33B4F215 /* Sources */,
+				57648D9A4FEA7F19791D0265 /* Resources */,
 				C5E9DBF2F01C14A8E0459B20 /* Frameworks */,
 			);
 			buildRules = (
@@ -401,6 +427,25 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		57648D9A4FEA7F19791D0265 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				687DE3401F3D9C92C10A083D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6F972A691F0EF967AA978187 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB9D9EF78A437712A763BE0B /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		7095EFFA6EF6D4DC33B4F215 /* Sources */ = {
