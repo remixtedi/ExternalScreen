@@ -1,0 +1,118 @@
+name: ExternalScreen
+
+options:
+  bundleIdPrefix: com.externalscreen
+  deploymentTarget:
+    macOS: "14.0"
+    iOS: "17.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    DEVELOPMENT_TEAM: YOUR_TEAM_ID_HERE
+
+targets:
+  ExternalScreenMac:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: ExternalScreenMac/Sources
+        type: group
+      - path: Shared
+        type: group
+      - path: ExternalScreenMac/Vendor/PeerTalk
+        type: group
+        excludes:
+          - "Info.plist"
+          - "*.plist"
+        compilerFlags:
+          - "-fno-objc-arc"
+    resources:
+      - path: ExternalScreenMac/Resources
+        excludes:
+          - "Info.plist"
+          - "*.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.externalscreen.mac
+        INFOPLIST_FILE: ExternalScreenMac/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ExternalScreenMac/Resources/ExternalScreenMac.entitlements
+        SWIFT_OBJC_BRIDGING_HEADER: ExternalScreenMac/ExternalScreenMac-Bridging-Header.h
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks"
+        COMBINE_HIDPI_IMAGES: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+    dependencies:
+      - sdk: ScreenCaptureKit.framework
+      - sdk: VideoToolbox.framework
+      - sdk: CoreMedia.framework
+      - sdk: CoreGraphics.framework
+      - sdk: AppKit.framework
+
+  ExternalScreenIOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ExternalScreenIOS/Sources
+        type: group
+      - path: Shared
+        type: group
+      - path: ExternalScreenIOS/Vendor/PeerTalk
+        type: group
+        excludes:
+          - "Info.plist"
+          - "*.plist"
+        compilerFlags:
+          - "-fno-objc-arc"
+    resources:
+      - path: ExternalScreenIOS/Resources
+        excludes:
+          - "Info.plist"
+          - "*.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.externalscreen.ios
+        INFOPLIST_FILE: ExternalScreenIOS/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ExternalScreenIOS/Resources/ExternalScreenIOS.entitlements
+        SWIFT_OBJC_BRIDGING_HEADER: ExternalScreenIOS/ExternalScreenIOS-Bridging-Header.h
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/Frameworks"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "2"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    dependencies:
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: VideoToolbox.framework
+      - sdk: CoreMedia.framework
+      - sdk: UIKit.framework
+
+schemes:
+  ExternalScreenMac:
+    build:
+      targets:
+        ExternalScreenMac: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    archive:
+      config: Release
+
+  ExternalScreenIOS:
+    build:
+      targets:
+        ExternalScreenIOS: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    archive:
+      config: Release

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- USB access via usbmuxd -->
+    <key>com.apple.security.temporary-exception.sbpl</key>
+    <array>
+        <string>(allow network* (local ip) (remote unix-socket (path-literal "/private/var/run/usbmuxd")))</string>
+    </array>
+
+    <!-- Allow outgoing network connections (for USB tunneling) -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+</dict>
+</plist>
