@@ -7,7 +7,7 @@ class MainWindow: NSWindow {
 
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 320),
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 370),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -27,25 +27,25 @@ class MainWindow: NSWindow {
         // Title
         let titleLabel = NSTextField(labelWithString: "External Screen")
         titleLabel.font = NSFont.boldSystemFont(ofSize: 20)
-        titleLabel.frame = NSRect(x: 20, y: 260, width: 380, height: 30)
+        titleLabel.frame = NSRect(x: 20, y: 310, width: 380, height: 30)
         contentView.addSubview(titleLabel)
 
         // Status
         let statusTitle = NSTextField(labelWithString: "Status:")
-        statusTitle.frame = NSRect(x: 20, y: 220, width: 60, height: 20)
+        statusTitle.frame = NSRect(x: 20, y: 270, width: 60, height: 20)
         contentView.addSubview(statusTitle)
 
         statusLabel = NSTextField(labelWithString: "Ready to start")
         statusLabel.textColor = .secondaryLabelColor
-        statusLabel.frame = NSRect(x: 85, y: 220, width: 280, height: 20)
+        statusLabel.frame = NSRect(x: 85, y: 270, width: 280, height: 20)
         contentView.addSubview(statusLabel)
 
         // Resolution picker
         let resLabel = NSTextField(labelWithString: "Resolution:")
-        resLabel.frame = NSRect(x: 20, y: 180, width: 80, height: 20)
+        resLabel.frame = NSRect(x: 20, y: 230, width: 80, height: 20)
         contentView.addSubview(resLabel)
 
-        resolutionPicker = NSPopUpButton(frame: NSRect(x: 105, y: 175, width: 220, height: 30))
+        resolutionPicker = NSPopUpButton(frame: NSRect(x: 105, y: 225, width: 220, height: 30))
         let presets = DisplayPreset.allCases
         let defaultPreset = ExternalScreenConstants.defaultPreset
         for preset in presets {
@@ -62,12 +62,12 @@ class MainWindow: NSWindow {
         // Buttons
         let startBtn = NSButton(title: "Start", target: nil, action: #selector(AppDelegate.startPipeline))
         startBtn.bezelStyle = .rounded
-        startBtn.frame = NSRect(x: 120, y: 130, width: 80, height: 32)
+        startBtn.frame = NSRect(x: 120, y: 180, width: 80, height: 32)
         contentView.addSubview(startBtn)
 
         let stopBtn = NSButton(title: "Stop", target: nil, action: #selector(AppDelegate.stopPipeline))
         stopBtn.bezelStyle = .rounded
-        stopBtn.frame = NSRect(x: 220, y: 130, width: 80, height: 32)
+        stopBtn.frame = NSRect(x: 220, y: 180, width: 80, height: 32)
         contentView.addSubview(stopBtn)
 
         // Instructions
@@ -82,10 +82,34 @@ class MainWindow: NSWindow {
         let instructionsLabel = NSTextField(wrappingLabelWithString: instructions)
         instructionsLabel.font = NSFont.systemFont(ofSize: 11)
         instructionsLabel.textColor = .secondaryLabelColor
-        instructionsLabel.frame = NSRect(x: 20, y: 10, width: 380, height: 110)
+        instructionsLabel.frame = NSRect(x: 20, y: 60, width: 380, height: 110)
         contentView.addSubview(instructionsLabel)
 
+        // Separator
+        let separator = NSBox(frame: NSRect(x: 20, y: 50, width: 380, height: 1))
+        separator.boxType = .separator
+        contentView.addSubview(separator)
+
+        // Project info
+        let infoLabel = NSTextField(labelWithString: "External Screen is open-source")
+        infoLabel.font = NSFont.systemFont(ofSize: 11)
+        infoLabel.textColor = .secondaryLabelColor
+        infoLabel.frame = NSRect(x: 20, y: 18, width: 210, height: 16)
+        contentView.addSubview(infoLabel)
+
+        // GitHub button
+        let githubBtn = NSButton(title: "View on GitHub", target: self, action: #selector(openGitHub))
+        githubBtn.bezelStyle = .inline
+        githubBtn.frame = NSRect(x: 230, y: 14, width: 120, height: 24)
+        contentView.addSubview(githubBtn)
+
         self.contentView = contentView
+    }
+
+    @objc private func openGitHub() {
+        if let url = URL(string: "https://github.com/remixtedi/ExternalScreen") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     @objc private func resolutionChanged(_ sender: NSPopUpButton) {

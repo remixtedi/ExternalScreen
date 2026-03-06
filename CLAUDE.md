@@ -2,9 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Naming
+
+The user-facing name is **"External Screen"** (with a space). Always use "External Screen" in UI text, labels, and user-facing strings. The codebase/repo uses "ExternalScreen" (no space) for identifiers, file names, and targets.
+
 ## Project Overview
 
-ExternalScreen is a macOS + iOS application that enables using an iPad as an external screen for a Mac via USB. The Mac captures screen content, encodes it as H.264, and streams it to the iPad, which decodes and renders via Metal. Touch events flow back from iPad to Mac.
+External Screen is a macOS + iOS application that enables using an iPad as an external screen for a Mac via USB. The Mac captures screen content, encodes it as H.264, and streams it to the iPad, which decodes and renders via Metal. Touch events flow back from iPad to Mac.
 
 ## Build Commands
 
