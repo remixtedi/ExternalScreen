@@ -160,8 +160,9 @@ do_mac() {
         sleep 1
     fi
 
-    # Install to /Applications
+    # Install to /Applications (remove old bundle first to avoid merge)
     info "Installing to $INSTALL_PATH..."
+    rm -rf "$INSTALL_PATH"
     cp -R "$build_dir/$APP_NAME" "$INSTALL_PATH"
 
     # Launch

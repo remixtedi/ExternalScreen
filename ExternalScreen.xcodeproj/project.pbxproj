@@ -35,6 +35,7 @@
 		BD12F5D3A9C6E950834D9FF3 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18C4ED281632D7ED2C2B18C8 /* VideoToolbox.framework */; };
 		C72BBE3E14CB03199E44A181 /* H264Encoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B86D1028E71FDA27E76F7FA /* H264Encoder.swift */; };
 		C825A37A4B9D97178787A411 /* TouchCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49AD430355BE6E6D77C189FC /* TouchCaptureView.swift */; };
+		CB304ED54F06D47EAEB90F2B /* ConnectionWaitingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20E14AFCA7603305073F55D2 /* ConnectionWaitingView.swift */; };
 		CFAB7FF2C8E14EACAD0890BE /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 2088AAA754B57C5166B25852 /* Shaders.metal */; };
 		D7DC270A64BF1E22BCE452BB /* ScreenCaptureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECB3EF61EA0153E2B6DD2A27 /* ScreenCaptureManager.swift */; };
 		DB7971F600A6F2C77CD26160 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89C8F1F533E38259836A0B2C /* AppDelegate.swift */; };
@@ -53,6 +54,7 @@
 		0D5AD6A0B26DFA057617F36D /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		18C4ED281632D7ED2C2B18C8 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
 		2088AAA754B57C5166B25852 /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
+		20E14AFCA7603305073F55D2 /* ConnectionWaitingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionWaitingView.swift; sourceTree = "<group>"; };
 		2446CA09896F968882B6F288 /* PTUSBHub.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTUSBHub.m; sourceTree = "<group>"; };
 		28109E0EEE1062DF90E87BB8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2D4BA93BD543A017CDA14CC3 /* PTUSBHub.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTUSBHub.m; sourceTree = "<group>"; };
@@ -195,6 +197,7 @@
 			isa = PBXGroup;
 			children = (
 				89C8F1F533E38259836A0B2C /* AppDelegate.swift */,
+				20E14AFCA7603305073F55D2 /* ConnectionWaitingView.swift */,
 				D6F9C98DAAD8335B757DF9C0 /* DisplayViewController.swift */,
 				3320B2DF39E0847E4793FEB4 /* SceneDelegate.swift */,
 			);
@@ -473,6 +476,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DB7971F600A6F2C77CD26160 /* AppDelegate.swift in Sources */,
+				CB304ED54F06D47EAEB90F2B /* ConnectionWaitingView.swift in Sources */,
 				FACB940373545F420E083151 /* Constants.swift in Sources */,
 				AFE483D4B4ECBE4184ADE655 /* DisplayViewController.swift in Sources */,
 				5E6ED740862E16EE52E16A3D /* H264Decoder.swift in Sources */,

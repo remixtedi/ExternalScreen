@@ -27,7 +27,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var isRunning = false
     private var frameNumber: UInt32 = 0
     private var didDropFrames = false  // Track if we dropped frames and need a keyframe
-    private var currentPreset: DisplayPreset = ExternalScreenConstants.defaultPreset
+    private(set) var currentPreset: DisplayPreset = ExternalScreenConstants.defaultPreset
     private var presetMenuItems: [NSMenuItem] = []
 
     // Debug logging
@@ -254,6 +254,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         mainWindowController?.show()
     }
 
+    /// Called by MainWindow toggle button
+    func togglePipeline() {
+        if isRunning {
+            stopPipeline()
+        } else {
+            startPipeline()
+        }
+    }
+
     /// Called by MainWindow when resolution picker changes
     func setPreset(_ preset: DisplayPreset) {
         guard preset != currentPreset else { return }
@@ -314,7 +323,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         isRunning = true
         updateStatusIcon(connected: usbDeviceManager.connected)
-        updateStatus(usbDeviceManager.connected ? "Connected - Streaming" : "Waiting for iPad...")
+        if usbDeviceManager.connected {
+            updateStatus("Connected - Streaming", state: .connected)
+        } else {
+            updateStatus("Waiting for iPad...", state: .waiting)
+        }
         log("startPipeline: Complete, waiting for iPad connection...")
     }
 
@@ -342,7 +355,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     // virtualDisplayManager.stop() - commented out to preserve position
 
                     updateStatusIcon(connected: false)
-                    updateStatus("Stopped")
+                    updateStatus("Stopped", state: .idle)
                     print("ExternalScreen Mac: Pipeline stopped (virtual display preserved)")
                 }
             }
@@ -352,7 +365,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Keep virtual display active to preserve position settings
 
             updateStatusIcon(connected: false)
-            updateStatus("Stopped")
+            updateStatus("Stopped", state: .idle)
             print("ExternalScreen Mac: Pipeline stopped (virtual display preserved)")
         }
     }
@@ -422,9 +435,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Public accessor for MainWindow to read current preset
+    var currentDisplayPreset: DisplayPreset { currentPreset }
+
     private func updateStatus(_ status: String) {
         DispatchQueue.main.async { [weak self] in
             (self?.mainWindowController?.window as? MainWindow)?.updateStatus(status)
+        }
+    }
+
+    private func updateStatus(_ status: String, state: ConnectionState) {
+        DispatchQueue.main.async { [weak self] in
+            (self?.mainWindowController?.window as? MainWindow)?.updateStatus(status, state: state)
         }
     }
 
@@ -524,7 +546,7 @@ extension AppDelegate: USBDeviceManagerDelegate {
         log("USB: iPad connected (device ID: \(deviceID))")
 
         updateStatusIcon(connected: true)
-        updateStatus("Connected - Streaming")
+        updateStatus("Connected - Streaming", state: .connected)
 
         // Reset flow control for fresh connection
         usbDeviceManager.resetFlowControl()
@@ -547,7 +569,7 @@ extension AppDelegate: USBDeviceManagerDelegate {
         log("USB: iPad disconnected (device ID: \(deviceID))")
 
         updateStatusIcon(connected: false)
-        updateStatus("iPad disconnected")
+        updateStatus("iPad disconnected", state: isRunning ? .waiting : .idle)
 
         // Stop capture but keep virtual display
         if #available(macOS 14.0, *) {
@@ -558,7 +580,7 @@ extension AppDelegate: USBDeviceManagerDelegate {
                     frameNumber = 0
                     // Update status after cleanup is done
                     if isRunning {
-                        updateStatus("Waiting for iPad...")
+                        updateStatus("Waiting for iPad...", state: .waiting)
                     }
                 }
             }
@@ -566,7 +588,7 @@ extension AppDelegate: USBDeviceManagerDelegate {
             h264Encoder.stop()
             frameNumber = 0
             if isRunning {
-                updateStatus("Waiting for iPad...")
+                updateStatus("Waiting for iPad...", state: .waiting)
             }
         }
     }

@@ -10,8 +10,11 @@ final class DisplayViewController: UIViewController {
     // UI
     private var metalView: MTKView!
     private var touchCaptureView: TouchCaptureView!
+    private var waitingView: ConnectionWaitingView!
+    private var statusPill: UIVisualEffectView!
+    private var statusDot: UIView!
     private var statusLabel: UILabel!
-    private var connectionIndicator: UIView!
+    private var statusPillHideTimer: Timer?
 
     // Core components
     private var usbConnectionManager: USBConnectionManager!
@@ -34,7 +37,6 @@ final class DisplayViewController: UIViewController {
     }
 
     private func setupNotifications() {
-        // Handle memory warnings
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleMemoryWarning),
@@ -42,7 +44,6 @@ final class DisplayViewController: UIViewController {
             object: nil
         )
 
-        // Handle app going to background
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleDidEnterBackground),
@@ -50,7 +51,6 @@ final class DisplayViewController: UIViewController {
             object: nil
         )
 
-        // Handle app coming to foreground
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleWillEnterForeground),
@@ -81,8 +81,6 @@ final class DisplayViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-
-        // Hide status bar for full screen
         setNeedsStatusBarAppearanceUpdate()
     }
 
@@ -115,65 +113,64 @@ final class DisplayViewController: UIViewController {
         touchCaptureView.delegate = self
         view.addSubview(touchCaptureView)
 
-        // Status overlay
-        setupStatusOverlay()
+        // Waiting view (between touch capture and status pill)
+        waitingView = ConnectionWaitingView(frame: view.bounds)
+        waitingView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(waitingView)
+
+        // Status pill overlay
+        setupStatusPill()
     }
 
-    private func setupStatusOverlay() {
-        // Semi-transparent status bar at top
-        let statusBar = UIView()
-        statusBar.backgroundColor = UIColor.black.withAlphaComponent(0.6)
-        statusBar.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(statusBar)
+    private func setupStatusPill() {
+        let blur = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        statusPill = UIVisualEffectView(effect: blur)
+        statusPill.layer.cornerRadius = 18
+        statusPill.clipsToBounds = true
+        statusPill.translatesAutoresizingMaskIntoConstraints = false
+        statusPill.alpha = 0
+        view.addSubview(statusPill)
 
-        // Connection indicator dot
-        connectionIndicator = UIView()
-        connectionIndicator.backgroundColor = .systemRed
-        connectionIndicator.layer.cornerRadius = 5
-        connectionIndicator.translatesAutoresizingMaskIntoConstraints = false
-        statusBar.addSubview(connectionIndicator)
+        let pillContent = statusPill.contentView
+
+        // Status dot
+        statusDot = UIView()
+        statusDot.backgroundColor = .systemRed
+        statusDot.layer.cornerRadius = 4
+        statusDot.translatesAutoresizingMaskIntoConstraints = false
 
         // Status label
         statusLabel = UILabel()
         statusLabel.text = "Waiting for Mac connection..."
         statusLabel.textColor = .white
-        statusLabel.font = UIFont.systemFont(ofSize: 14)
+        statusLabel.font = UIFont.systemFont(ofSize: 13, weight: .medium)
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
-        statusBar.addSubview(statusLabel)
+
+        pillContent.addSubview(statusDot)
+        pillContent.addSubview(statusLabel)
 
         NSLayoutConstraint.activate([
-            statusBar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            statusBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            statusBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            statusBar.heightAnchor.constraint(equalToConstant: 30),
+            statusPill.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            statusPill.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            statusPill.heightAnchor.constraint(equalToConstant: 36),
 
-            connectionIndicator.leadingAnchor.constraint(equalTo: statusBar.leadingAnchor, constant: 10),
-            connectionIndicator.centerYAnchor.constraint(equalTo: statusBar.centerYAnchor),
-            connectionIndicator.widthAnchor.constraint(equalToConstant: 10),
-            connectionIndicator.heightAnchor.constraint(equalToConstant: 10),
+            statusDot.leadingAnchor.constraint(equalTo: pillContent.leadingAnchor, constant: 20),
+            statusDot.centerYAnchor.constraint(equalTo: pillContent.centerYAnchor),
+            statusDot.widthAnchor.constraint(equalToConstant: 8),
+            statusDot.heightAnchor.constraint(equalToConstant: 8),
 
-            statusLabel.leadingAnchor.constraint(equalTo: connectionIndicator.trailingAnchor, constant: 8),
-            statusLabel.centerYAnchor.constraint(equalTo: statusBar.centerYAnchor)
+            statusLabel.leadingAnchor.constraint(equalTo: statusDot.trailingAnchor, constant: 8),
+            statusLabel.trailingAnchor.constraint(equalTo: pillContent.trailingAnchor, constant: -20),
+            statusLabel.centerYAnchor.constraint(equalTo: pillContent.centerYAnchor),
         ])
-
-        // Fade out status bar after initial display
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-            self?.fadeStatusBar(show: false)
-        }
     }
 
     private func setupComponents() {
-        // Initialize Metal renderer
         metalRenderer = MetalRenderer(metalView: metalView)
-
-        // Initialize decoder
         h264Decoder = H264Decoder()
         h264Decoder.delegate = self
-
-        // Initialize USB manager
         usbConnectionManager = USBConnectionManager()
         usbConnectionManager.delegate = self
-
         print("DisplayViewController: Components initialized")
     }
 
@@ -188,45 +185,52 @@ final class DisplayViewController: UIViewController {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
 
-            self.connectionIndicator.backgroundColor = connected ? .systemGreen : .systemRed
+            self.statusDot.backgroundColor = connected ? .systemGreen : .systemRed
 
             if connected {
                 self.statusLabel.text = "Connected to Mac"
+                self.waitingView.hide(animated: true)
+                self.showStatusPill(autoHide: true)
             } else {
                 self.statusLabel.text = "Waiting for Mac connection..."
+                self.waitingView.show()
                 self.metalRenderer?.clear()
+                self.showStatusPill(autoHide: false)
             }
+        }
+    }
 
-            // Show status bar briefly
-            self.fadeStatusBar(show: true)
+    private func showStatusPill(autoHide: Bool) {
+        statusPillHideTimer?.invalidate()
+        statusPillHideTimer = nil
 
-            if connected {
-                // Hide again after a delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-                    self?.fadeStatusBar(show: false)
+        UIView.animate(withDuration: 0.3) {
+            self.statusPill.alpha = 1.0
+        }
+
+        if autoHide {
+            statusPillHideTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
+                UIView.animate(withDuration: 0.3) {
+                    self?.statusPill.alpha = 0.0
                 }
             }
         }
     }
 
-    private func fadeStatusBar(show: Bool) {
-        guard let statusBar = statusLabel.superview else { return }
-
+    private func hideStatusPill() {
+        statusPillHideTimer?.invalidate()
+        statusPillHideTimer = nil
         UIView.animate(withDuration: 0.3) {
-            statusBar.alpha = show ? 1.0 : 0.0
+            self.statusPill.alpha = 0.0
         }
     }
 
-    // Show status bar when tapping
+    // Show status pill when tapping during streaming
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         super.touchesBegan(touches, with: event)
 
         if usbConnectionManager.connected {
-            fadeStatusBar(show: true)
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-                self?.fadeStatusBar(show: false)
-            }
+            showStatusPill(autoHide: true)
         }
     }
 }
@@ -251,7 +255,6 @@ extension DisplayViewController: USBConnectionManagerDelegate {
     func connectionManager(_ manager: USBConnectionManager, didReceive data: Data) {
         Self.messageCount += 1
 
-        // Parse message header
         guard data.count >= MessageHeader.size else {
             print("DisplayViewController: Message too small: \(data.count) bytes")
             return
@@ -264,7 +267,6 @@ extension DisplayViewController: USBConnectionManagerDelegate {
         let payloadStart = MessageHeader.size
         let payload = data.subdata(in: payloadStart..<data.count)
 
-        // Log first few messages
         if Self.messageCount <= 5 {
             print("DisplayViewController: Message #\(Self.messageCount) type=\(header.type) payload=\(payload.count) bytes")
         }
@@ -299,7 +301,6 @@ extension DisplayViewController: USBConnectionManagerDelegate {
     private func handleDisplayConfig(_ config: DisplayConfigMessage) {
         print("DisplayViewController: Display config received: \(config.width)x\(config.height) @ \(config.refreshRate)Hz")
 
-        // Reset decoder if resolution changed so it accepts new SPS/PPS
         if let oldConfig = displayConfig,
            oldConfig.width != config.width || oldConfig.height != config.height {
             print("DisplayViewController: Resolution changed from \(oldConfig.width)x\(oldConfig.height) to \(config.width)x\(config.height), resetting decoder")
@@ -309,13 +310,11 @@ extension DisplayViewController: USBConnectionManagerDelegate {
         }
 
         displayConfig = config
-
-        // Update decoder frame rate for proper timing
         h264Decoder.setFrameRate(Int(config.refreshRate))
 
-        // Update status
         DispatchQueue.main.async { [weak self] in
-            self?.statusLabel.text = "Connected: \(config.width)x\(config.height) @ \(Int(config.refreshRate))Hz"
+            self?.statusLabel.text = "\(config.width)x\(config.height) @ \(Int(config.refreshRate))Hz"
+            self?.showStatusPill(autoHide: true)
         }
     }
 
@@ -327,18 +326,14 @@ extension DisplayViewController: USBConnectionManagerDelegate {
 
         let pts = frameHeader?.presentationTime ?? UInt64(frameCount) * 16667
 
-        // Log every 30 frames, or first 5 frames
         if frameCount % 30 == 0 || frameCount < 5 {
             print("DisplayViewController: Frame \(frameCount), size=\(data.count), keyframe=\(frameHeader?.isKeyframe ?? false)")
-            // Log first 16 bytes to check H264 format
             let preview = data.prefix(16).map { String(format: "%02x", $0) }.joined(separator: " ")
             print("DisplayViewController: Frame data preview: \(preview)")
         }
 
-        // Decode the frame
         h264Decoder.decode(data: data, presentationTime: pts)
 
-        // Send acknowledgment
         if let frameHeader = frameHeader {
             usbConnectionManager.sendFrameAck(frameNumber: frameHeader.frameNumber)
         }
@@ -355,14 +350,12 @@ extension DisplayViewController: H264DecoderDelegate {
     func h264Decoder(_ decoder: H264Decoder, didDecode pixelBuffer: CVPixelBuffer, presentationTime: CMTime) {
         Self.decodedFrameCount += 1
 
-        // Log every 30 decoded frames
         if Self.decodedFrameCount % 30 == 0 {
             let width = CVPixelBufferGetWidth(pixelBuffer)
             let height = CVPixelBufferGetHeight(pixelBuffer)
             print("DisplayViewController: Decoded frame \(Self.decodedFrameCount), \(width)x\(height)")
         }
 
-        // Display the frame
         metalRenderer?.display(pixelBuffer: pixelBuffer)
     }
 

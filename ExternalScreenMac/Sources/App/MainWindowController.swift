@@ -1,19 +1,40 @@
 import Cocoa
 
+/// Connection state for status indicator
+enum ConnectionState {
+    case idle, waiting, connected, error
+
+    var dotColor: NSColor {
+        switch self {
+        case .idle: return .systemRed
+        case .waiting: return .systemOrange
+        case .connected: return .systemGreen
+        case .error: return .systemRed
+        }
+    }
+}
+
 /// Main window for the macOS app
 class MainWindow: NSWindow {
     private var resolutionPicker: NSPopUpButton!
     private var statusLabel: NSTextField!
+    private var statusDot: NSView!
+    private var resolutionLabel: NSTextField!
+    private var toggleButton: NSButton!
 
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 370),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 420),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
 
         self.title = "External Screen"
+        self.titlebarAppearsTransparent = true
+        self.titleVisibility = .hidden
+        self.isMovableByWindowBackground = true
+        self.minSize = NSSize(width: 420, height: 380)
         self.center()
         self.isReleasedWhenClosed = false
 
@@ -21,95 +42,240 @@ class MainWindow: NSWindow {
     }
 
     private func setupContent() {
-        let contentView = NSView(frame: self.contentRect(forFrameRect: self.frame))
-        contentView.wantsLayer = true
+        // Visual effect background
+        let visualEffect = NSVisualEffectView()
+        visualEffect.material = .sidebar
+        visualEffect.blendingMode = .behindWindow
+        visualEffect.state = .active
+        self.contentView = visualEffect
 
-        // Title
-        let titleLabel = NSTextField(labelWithString: "External Screen")
-        titleLabel.font = NSFont.boldSystemFont(ofSize: 20)
-        titleLabel.frame = NSRect(x: 20, y: 310, width: 380, height: 30)
-        contentView.addSubview(titleLabel)
+        // Main vertical stack
+        let mainStack = NSStackView()
+        mainStack.orientation = .vertical
+        mainStack.spacing = 16
+        mainStack.edgeInsets = NSEdgeInsets(top: 24, left: 24, bottom: 24, right: 24)
+        mainStack.translatesAutoresizingMaskIntoConstraints = false
+        visualEffect.addSubview(mainStack)
 
-        // Status
-        let statusTitle = NSTextField(labelWithString: "Status:")
-        statusTitle.frame = NSRect(x: 20, y: 270, width: 60, height: 20)
-        contentView.addSubview(statusTitle)
+        NSLayoutConstraint.activate([
+            mainStack.topAnchor.constraint(equalTo: visualEffect.topAnchor),
+            mainStack.leadingAnchor.constraint(equalTo: visualEffect.leadingAnchor),
+            mainStack.trailingAnchor.constraint(equalTo: visualEffect.trailingAnchor),
+            mainStack.bottomAnchor.constraint(equalTo: visualEffect.bottomAnchor),
+        ])
+
+        // Header
+        let headerStack = NSStackView()
+        headerStack.orientation = .horizontal
+        headerStack.spacing = 10
+        headerStack.alignment = .centerY
+
+        let headerIcon = NSImageView()
+        headerIcon.image = NSApp.applicationIconImage
+        headerIcon.imageScaling = .scaleProportionallyUpOrDown
+        headerIcon.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            headerIcon.widthAnchor.constraint(equalToConstant: 40),
+            headerIcon.heightAnchor.constraint(equalToConstant: 40),
+        ])
+        headerIcon.setContentHuggingPriority(.required, for: .horizontal)
+
+        let headerLabel = NSTextField(labelWithString: "External Screen")
+        headerLabel.font = NSFont.systemFont(ofSize: 22, weight: .semibold)
+        headerLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
+        headerStack.addArrangedSubview(headerIcon)
+        headerStack.addArrangedSubview(headerLabel)
+        mainStack.addArrangedSubview(headerStack)
+
+        // Status card
+        let statusCard = makeCard()
+        let statusCardStack = NSStackView()
+        statusCardStack.orientation = .horizontal
+        statusCardStack.spacing = 8
+        statusCardStack.alignment = .centerY
+        statusCardStack.translatesAutoresizingMaskIntoConstraints = false
+        statusCard.addSubview(statusCardStack)
+
+        NSLayoutConstraint.activate([
+            statusCardStack.topAnchor.constraint(equalTo: statusCard.topAnchor, constant: 12),
+            statusCardStack.bottomAnchor.constraint(equalTo: statusCard.bottomAnchor, constant: -12),
+            statusCardStack.leadingAnchor.constraint(equalTo: statusCard.leadingAnchor, constant: 16),
+            statusCardStack.trailingAnchor.constraint(equalTo: statusCard.trailingAnchor, constant: -16),
+        ])
+
+        statusDot = NSView()
+        statusDot.wantsLayer = true
+        statusDot.layer?.backgroundColor = NSColor.systemRed.cgColor
+        statusDot.layer?.cornerRadius = 5
+        statusDot.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            statusDot.widthAnchor.constraint(equalToConstant: 10),
+            statusDot.heightAnchor.constraint(equalToConstant: 10),
+        ])
 
         statusLabel = NSTextField(labelWithString: "Ready to start")
-        statusLabel.textColor = .secondaryLabelColor
-        statusLabel.frame = NSRect(x: 85, y: 270, width: 280, height: 20)
-        contentView.addSubview(statusLabel)
+        statusLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+        statusLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
 
-        // Resolution picker
+        resolutionLabel = NSTextField(labelWithString: "")
+        resolutionLabel.font = NSFont.systemFont(ofSize: 12)
+        resolutionLabel.textColor = .secondaryLabelColor
+        resolutionLabel.alignment = .right
+        resolutionLabel.setContentHuggingPriority(.required, for: .horizontal)
+        resolutionLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        statusCardStack.addArrangedSubview(statusDot)
+        statusCardStack.addArrangedSubview(statusLabel)
+        statusCardStack.addArrangedSubview(resolutionLabel)
+        mainStack.addArrangedSubview(statusCard)
+
+        // Controls card
+        let controlsCard = makeCard()
+        let controlsStack = NSStackView()
+        controlsStack.orientation = .vertical
+        controlsStack.spacing = 12
+        controlsStack.translatesAutoresizingMaskIntoConstraints = false
+        controlsCard.addSubview(controlsStack)
+
+        NSLayoutConstraint.activate([
+            controlsStack.topAnchor.constraint(equalTo: controlsCard.topAnchor, constant: 16),
+            controlsStack.bottomAnchor.constraint(equalTo: controlsCard.bottomAnchor, constant: -16),
+            controlsStack.leadingAnchor.constraint(equalTo: controlsCard.leadingAnchor, constant: 16),
+            controlsStack.trailingAnchor.constraint(equalTo: controlsCard.trailingAnchor, constant: -16),
+        ])
+
+        // Resolution picker row
+        let resRow = NSStackView()
+        resRow.orientation = .horizontal
+        resRow.spacing = 8
+        resRow.alignment = .centerY
+
         let resLabel = NSTextField(labelWithString: "Resolution:")
-        resLabel.frame = NSRect(x: 20, y: 230, width: 80, height: 20)
-        contentView.addSubview(resLabel)
+        resLabel.font = NSFont.systemFont(ofSize: 13)
+        resLabel.setContentHuggingPriority(.required, for: .horizontal)
 
-        resolutionPicker = NSPopUpButton(frame: NSRect(x: 105, y: 225, width: 220, height: 30))
+        resolutionPicker = NSPopUpButton(frame: .zero, pullsDown: false)
         let presets = DisplayPreset.allCases
         let defaultPreset = ExternalScreenConstants.defaultPreset
         for preset in presets {
             resolutionPicker.addItem(withTitle: "\(preset.rawValue) (\(preset.description))")
         }
-        // Select the default preset
         if let defaultIndex = presets.firstIndex(of: defaultPreset) {
             resolutionPicker.selectItem(at: defaultIndex)
         }
         resolutionPicker.target = self
         resolutionPicker.action = #selector(resolutionChanged(_:))
-        contentView.addSubview(resolutionPicker)
 
-        // Buttons
-        let startBtn = NSButton(title: "Start", target: nil, action: #selector(AppDelegate.startPipeline))
-        startBtn.bezelStyle = .rounded
-        startBtn.frame = NSRect(x: 120, y: 180, width: 80, height: 32)
-        contentView.addSubview(startBtn)
+        resRow.addArrangedSubview(resLabel)
+        resRow.addArrangedSubview(resolutionPicker)
+        controlsStack.addArrangedSubview(resRow)
 
-        let stopBtn = NSButton(title: "Stop", target: nil, action: #selector(AppDelegate.stopPipeline))
-        stopBtn.bezelStyle = .rounded
-        stopBtn.frame = NSRect(x: 220, y: 180, width: 80, height: 32)
-        contentView.addSubview(stopBtn)
+        // Toggle button
+        toggleButton = NSButton(title: "Start", target: self, action: #selector(togglePipeline))
+        toggleButton.bezelStyle = .rounded
+        toggleButton.bezelColor = .systemGreen
+        toggleButton.contentTintColor = .white
+        toggleButton.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        toggleButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 200).isActive = true
+        controlsStack.addArrangedSubview(toggleButton)
 
-        // Instructions
-        let instructions = """
-        Instructions:
-        1. Connect your iPad via USB cable
-        2. Open External Screen app on your iPad
-        3. Click "Start" button above to begin
+        mainStack.addArrangedSubview(controlsCard)
 
-        A virtual display will appear in System Settings.
-        """
-        let instructionsLabel = NSTextField(wrappingLabelWithString: instructions)
-        instructionsLabel.font = NSFont.systemFont(ofSize: 11)
-        instructionsLabel.textColor = .secondaryLabelColor
-        instructionsLabel.frame = NSRect(x: 20, y: 60, width: 380, height: 110)
-        contentView.addSubview(instructionsLabel)
+        // Instructions card
+        let instructionsCard = makeCard(alpha: 0.5)
+        let instructionsStack = NSStackView()
+        instructionsStack.orientation = .vertical
+        instructionsStack.spacing = 10
+        instructionsStack.translatesAutoresizingMaskIntoConstraints = false
+        instructionsCard.addSubview(instructionsStack)
 
-        // Separator
-        let separator = NSBox(frame: NSRect(x: 20, y: 50, width: 380, height: 1))
-        separator.boxType = .separator
-        contentView.addSubview(separator)
+        NSLayoutConstraint.activate([
+            instructionsStack.topAnchor.constraint(equalTo: instructionsCard.topAnchor, constant: 16),
+            instructionsStack.bottomAnchor.constraint(equalTo: instructionsCard.bottomAnchor, constant: -16),
+            instructionsStack.leadingAnchor.constraint(equalTo: instructionsCard.leadingAnchor, constant: 16),
+            instructionsStack.trailingAnchor.constraint(equalTo: instructionsCard.trailingAnchor, constant: -16),
+        ])
 
-        // Project info
+        let howToLabel = NSTextField(labelWithString: "HOW TO USE")
+        howToLabel.font = NSFont.systemFont(ofSize: 11, weight: .semibold)
+        howToLabel.textColor = .secondaryLabelColor
+        instructionsStack.addArrangedSubview(howToLabel)
+
+        let steps: [(String, String)] = [
+            ("cable.connector", "Connect your iPad via USB cable"),
+            ("ipad", "Open External Screen on your iPad"),
+            ("play.fill", "Click Start to begin streaming"),
+        ]
+
+        for (symbolName, text) in steps {
+            let row = NSStackView()
+            row.orientation = .horizontal
+            row.spacing = 8
+            row.alignment = .centerY
+
+            let icon = NSImageView()
+            if let img = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil) {
+                let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
+                icon.image = img.withSymbolConfiguration(config)
+                icon.contentTintColor = .secondaryLabelColor
+            }
+            icon.setContentHuggingPriority(.required, for: .horizontal)
+            icon.widthAnchor.constraint(equalToConstant: 20).isActive = true
+
+            let label = NSTextField(labelWithString: text)
+            label.font = NSFont.systemFont(ofSize: 12)
+            label.textColor = .secondaryLabelColor
+
+            row.addArrangedSubview(icon)
+            row.addArrangedSubview(label)
+            instructionsStack.addArrangedSubview(row)
+        }
+
+        mainStack.addArrangedSubview(instructionsCard)
+
+        // Flexible spacer
+        let spacer = NSView()
+        spacer.setContentHuggingPriority(.defaultLow, for: .vertical)
+        mainStack.addArrangedSubview(spacer)
+
+        // Footer
+        let footerStack = NSStackView()
+        footerStack.orientation = .horizontal
+        footerStack.spacing = 4
+        footerStack.alignment = .centerY
+
         let infoLabel = NSTextField(labelWithString: "External Screen is open-source")
         infoLabel.font = NSFont.systemFont(ofSize: 11)
-        infoLabel.textColor = .secondaryLabelColor
-        infoLabel.frame = NSRect(x: 20, y: 18, width: 210, height: 16)
-        contentView.addSubview(infoLabel)
+        infoLabel.textColor = .tertiaryLabelColor
+        infoLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
 
-        // GitHub button
         let githubBtn = NSButton(title: "View on GitHub", target: self, action: #selector(openGitHub))
         githubBtn.bezelStyle = .inline
-        githubBtn.frame = NSRect(x: 230, y: 14, width: 120, height: 24)
-        contentView.addSubview(githubBtn)
+        githubBtn.font = NSFont.systemFont(ofSize: 11)
 
-        self.contentView = contentView
+        footerStack.addArrangedSubview(infoLabel)
+        footerStack.addArrangedSubview(githubBtn)
+        mainStack.addArrangedSubview(footerStack)
+    }
+
+    private func makeCard(alpha: CGFloat = 1.0) -> NSView {
+        let card = NSView()
+        card.wantsLayer = true
+        card.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(alpha).cgColor
+        card.layer?.cornerRadius = 10
+        return card
     }
 
     @objc private func openGitHub() {
         if let url = URL(string: "https://github.com/remixtedi/ExternalScreen") {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    @objc private func togglePipeline() {
+        guard let appDelegate = NSApp.delegate as? AppDelegate else { return }
+        appDelegate.togglePipeline()
     }
 
     @objc private func resolutionChanged(_ sender: NSPopUpButton) {
@@ -120,14 +286,52 @@ class MainWindow: NSWindow {
         let preset = presets[index]
         print("MainWindow: Resolution changed to \(preset.rawValue) (\(preset.description))")
 
-        // Notify AppDelegate of the change
         if let appDelegate = NSApp.delegate as? AppDelegate {
             appDelegate.setPreset(preset)
         }
     }
 
-    func updateStatus(_ status: String) {
+    func updateStatus(_ status: String, state: ConnectionState) {
         statusLabel?.stringValue = status
+        statusDot?.layer?.backgroundColor = state.dotColor.cgColor
+
+        // Update resolution label when connected
+        if state == .connected {
+            if let appDelegate = NSApp.delegate as? AppDelegate {
+                let preset = appDelegate.currentDisplayPreset
+                resolutionLabel?.stringValue = "\(preset.width)x\(preset.height)"
+            }
+        } else {
+            resolutionLabel?.stringValue = ""
+        }
+
+        // Update toggle button based on state
+        switch state {
+        case .idle, .error:
+            toggleButton?.title = "Start"
+            toggleButton?.bezelColor = .systemGreen
+            toggleButton?.contentTintColor = .white
+        case .waiting, .connected:
+            toggleButton?.title = "Stop"
+            toggleButton?.bezelColor = .systemRed
+            toggleButton?.contentTintColor = .white
+        }
+    }
+
+    func updateStatus(_ status: String) {
+        // Infer state from status text
+        let state: ConnectionState
+        let lower = status.lowercased()
+        if lower.contains("connected") || lower.contains("streaming") {
+            state = .connected
+        } else if lower.contains("waiting") || lower.contains("starting") {
+            state = .waiting
+        } else if lower.contains("failed") || lower.contains("error") {
+            state = .error
+        } else {
+            state = .idle
+        }
+        updateStatus(status, state: state)
     }
 
     func updateSelectedPreset(_ preset: DisplayPreset) {
