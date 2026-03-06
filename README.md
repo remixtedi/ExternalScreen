@@ -1,8 +1,8 @@
-# ExternalScreen
+# External Screen
 
 Use your iPad as an external display for your Mac over USB.
 
-ExternalScreen captures your Mac's screen content, encodes it as H.264 video, and streams it to your iPad in real-time via USB. Touch events on the iPad flow back to the Mac, giving you a fully interactive second screen with no Wi-Fi needed.
+External Screen captures your Mac's screen content, encodes it as H.264 video, and streams it to your iPad in real-time via USB. Touch events on the iPad flow back to the Mac, giving you a fully interactive second screen with no Wi-Fi needed.
 
 ## Features
 
@@ -22,7 +22,7 @@ ExternalScreen captures your Mac's screen content, encodes it as H.264 video, an
 
 ## Installation
 
-Since ExternalScreen is not on the App Store, you'll need to build from source or sideload.
+Since External Screen is not on the App Store, you'll need to build from source or sideload.
 
 ### Option 1: Build from Source (Recommended)
 
