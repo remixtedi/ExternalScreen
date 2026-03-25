@@ -29,6 +29,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var didDropFrames = false  // Track if we dropped frames and need a keyframe
     private(set) var currentPreset: DisplayPreset = ExternalScreenConstants.defaultPreset
     private var presetMenuItems: [NSMenuItem] = []
+    private var isPortrait: Bool = false
+    private var orientationDebounceTask: Task<Void, Never>?
+
+    /// Effective width accounting for orientation
+    private var effectiveWidth: Int {
+        isPortrait ? currentPreset.height : currentPreset.width
+    }
+
+    /// Effective height accounting for orientation
+    private var effectiveHeight: Int {
+        isPortrait ? currentPreset.width : currentPreset.height
+    }
 
     // Debug logging
     private func log(_ message: String) {
@@ -148,19 +160,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func reinitializeComponentsWithCurrentPreset() {
-        // Reinitialize managers with current preset
-        virtualDisplayManager = VirtualDisplayManager(preset: currentPreset)
+        // Reinitialize managers with effective dimensions (accounting for orientation)
+        let w = effectiveWidth
+        let h = effectiveHeight
+        virtualDisplayManager = VirtualDisplayManager(width: w, height: h)
         virtualDisplayManager.delegate = self
 
         if #available(macOS 14.0, *) {
-            screenCaptureManager = ScreenCaptureManager(preset: currentPreset)
+            screenCaptureManager = ScreenCaptureManager(width: w, height: h, frameRate: Int(ExternalScreenConstants.defaultRefreshRate))
             screenCaptureManager.delegate = self
         }
 
-        h264Encoder = H264Encoder(preset: currentPreset)
+        h264Encoder = H264Encoder(width: w, height: h, frameRate: Int(ExternalScreenConstants.defaultRefreshRate), bitrate: currentPreset.recommendedBitrate, keyframeInterval: ExternalScreenConstants.keyframeInterval)
         h264Encoder.delegate = self
 
-        print("ExternalScreen Mac: Components reinitialized with preset \(currentPreset.rawValue) (\(currentPreset.description))")
+        print("ExternalScreen Mac: Components reinitialized with \(w)x\(h) (\(currentPreset.rawValue))")
     }
 
     private func restartWithNewPreset() {
@@ -171,14 +185,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 h264Encoder.stop()
 
                 // Update virtual display resolution (keeps same display ID and USB connection)
-                let updated = virtualDisplayManager.updateResolution(preset: currentPreset)
-                log("restartWithNewPreset: updateResolution(\(currentPreset.description)) -> \(updated)")
+                let w = self.effectiveWidth
+                let h = self.effectiveHeight
+                let updated = virtualDisplayManager.updateResolution(width: w, height: h)
+                log("restartWithNewPreset: updateResolution(\(w)x\(h)) -> \(updated)")
 
-                // Recreate encoder and capture manager with new preset
-                h264Encoder = H264Encoder(preset: currentPreset)
+                // Recreate encoder and capture manager with effective dimensions
+                h264Encoder = H264Encoder(width: w, height: h, frameRate: Int(ExternalScreenConstants.defaultRefreshRate), bitrate: currentPreset.recommendedBitrate, keyframeInterval: ExternalScreenConstants.keyframeInterval)
                 h264Encoder.delegate = self
 
-                screenCaptureManager = ScreenCaptureManager(preset: currentPreset)
+                screenCaptureManager = ScreenCaptureManager(width: w, height: h, frameRate: Int(ExternalScreenConstants.defaultRefreshRate))
                 screenCaptureManager.delegate = self
 
                 // Reset frame counter for clean restart
@@ -188,10 +204,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
                 // Restart if iPad is connected
                 if usbDeviceManager.connected {
-                    // Send updated display config
+                    // Send updated display config with effective dimensions
                     let config = DisplayConfigMessage(
-                        width: UInt32(currentPreset.width),
-                        height: UInt32(currentPreset.height),
+                        width: UInt32(w),
+                        height: UInt32(h),
                         refreshRate: Float(ExternalScreenConstants.defaultRefreshRate)
                     )
                     usbDeviceManager.sendMessage(type: .displayConfig, payload: config.toData())
@@ -203,7 +219,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     startCaptureAndEncoding()
                 }
 
-                log("restartWithNewPreset: Complete - now using \(currentPreset.description)")
+                log("restartWithNewPreset: Complete - now using \(w)x\(h)")
             }
         }
     }
@@ -367,6 +383,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             updateStatusIcon(connected: false)
             updateStatus("Stopped", state: .idle)
             print("ExternalScreen Mac: Pipeline stopped (virtual display preserved)")
+        }
+    }
+
+    // MARK: - Orientation Handling
+
+    private func handleOrientationChange(_ orientation: ScreenOrientation) {
+        let newIsPortrait = (orientation == .portrait)
+        guard newIsPortrait != isPortrait else {
+            log("handleOrientationChange: Already in \(orientation), ignoring")
+            return
+        }
+
+        log("handleOrientationChange: Changing to \(orientation)")
+        isPortrait = newIsPortrait
+
+        // Debounce rapid orientation changes
+        orientationDebounceTask?.cancel()
+        orientationDebounceTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)  // 300ms debounce
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                if isRunning {
+                    restartWithNewPreset()
+                } else {
+                    reinitializeComponentsWithCurrentPreset()
+                }
+            }
         }
     }
 
@@ -552,13 +595,13 @@ extension AppDelegate: USBDeviceManagerDelegate {
         usbDeviceManager.resetFlowControl()
         frameNumber = 0
 
-        // Send display configuration
+        // Send display configuration with effective dimensions
         let config = DisplayConfigMessage(
-            width: UInt32(virtualDisplayManager.width),
-            height: UInt32(virtualDisplayManager.height),
+            width: UInt32(effectiveWidth),
+            height: UInt32(effectiveHeight),
             refreshRate: Float(virtualDisplayManager.refreshRate)
         )
-        log("USB: Sending display config \(virtualDisplayManager.width)x\(virtualDisplayManager.height)")
+        log("USB: Sending display config \(effectiveWidth)x\(effectiveHeight)")
         manager.sendMessage(type: .displayConfig, payload: config.toData())
 
         // Start capture and encoding
@@ -612,6 +655,11 @@ extension AppDelegate: USBDeviceManagerDelegate {
         case .frameAck:
             if let ack = FrameAckMessage.from(data: payload) {
                 usbDeviceManager.acknowledgeFrame(ack.frameNumber)
+            }
+
+        case .orientationChange:
+            if let orientationMsg = OrientationMessage.from(data: payload) {
+                handleOrientationChange(orientationMsg.orientation)
             }
 
         default:

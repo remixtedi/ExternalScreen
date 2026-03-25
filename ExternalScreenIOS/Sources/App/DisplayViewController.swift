@@ -24,6 +24,7 @@ final class DisplayViewController: UIViewController {
     // State
     private var displayConfig: DisplayConfigMessage?
     private var frameCount: UInt32 = 0
+    private var currentOrientation: ScreenOrientation = .landscape
 
     // MARK: - Lifecycle
 
@@ -93,7 +94,21 @@ final class DisplayViewController: UIViewController {
     }
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        return .landscape
+        return .all
+    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+
+        let newOrientation: ScreenOrientation = size.height > size.width ? .portrait : .landscape
+        guard newOrientation != currentOrientation else { return }
+
+        currentOrientation = newOrientation
+        print("DisplayViewController: Orientation changed to \(newOrientation)")
+
+        if usbConnectionManager.connected {
+            usbConnectionManager.sendOrientation(newOrientation)
+        }
     }
 
     // MARK: - Setup
@@ -241,6 +256,11 @@ extension DisplayViewController: USBConnectionManagerDelegate {
     func connectionManager(_ manager: USBConnectionManager, didConnect port: UInt16) {
         print("DisplayViewController: Connected to Mac on port \(port)")
         updateConnectionStatus(connected: true)
+
+        // Send current orientation so Mac starts with correct dimensions
+        let orientation: ScreenOrientation = view.bounds.height > view.bounds.width ? .portrait : .landscape
+        currentOrientation = orientation
+        usbConnectionManager.sendOrientation(orientation)
     }
 
     func connectionManager(_ manager: USBConnectionManager, didDisconnect error: Error?) {

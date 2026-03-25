@@ -120,6 +120,12 @@ final class USBConnectionManager: NSObject {
         sendMessage(type: type, payload: touch.toData())
     }
 
+    /// Sends an orientation change to the Mac
+    func sendOrientation(_ orientation: ScreenOrientation) {
+        let message = OrientationMessage(orientation: orientation)
+        sendMessage(type: .orientationChange, payload: message.toData())
+    }
+
     /// Sends a frame acknowledgment
     func sendFrameAck(frameNumber: UInt32) {
         let ack = FrameAckMessage(

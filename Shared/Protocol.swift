@@ -11,6 +11,36 @@ public enum MessageType: UInt32 {
     case touchEnded = 6
     case touchCancelled = 7
     case disconnect = 8
+    case orientationChange = 9
+}
+
+/// Screen orientation sent from iPad to Mac
+public enum ScreenOrientation: UInt8 {
+    case landscape = 0
+    case portrait = 1
+}
+
+/// Orientation change message sent from iPad to Mac
+public struct OrientationMessage {
+    public let orientation: ScreenOrientation
+
+    public init(orientation: ScreenOrientation) {
+        self.orientation = orientation
+    }
+
+    public static let size = 1
+
+    public func toData() -> Data {
+        var raw = orientation.rawValue
+        return Data(bytes: &raw, count: 1)
+    }
+
+    public static func from(data: Data) -> OrientationMessage? {
+        guard data.count >= size else { return nil }
+        let raw = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 0, as: UInt8.self) }
+        guard let orientation = ScreenOrientation(rawValue: raw) else { return nil }
+        return OrientationMessage(orientation: orientation)
+    }
 }
 
 /// Header for all messages sent over USB
