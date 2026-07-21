@@ -238,7 +238,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         h264Encoder.delegate = self
 
         usbDeviceManager = USBDeviceManager()
-        usbDeviceManager.delegate = self
+        usbDeviceManager.transportDelegate = self
 
         touchEventHandler = TouchEventHandler()
 
@@ -582,62 +582,50 @@ extension AppDelegate: H264EncoderDelegate {
     }
 }
 
-// MARK: - USBDeviceManagerDelegate
+// MARK: - FrameTransportDelegate
 
-extension AppDelegate: USBDeviceManagerDelegate {
-    func usbDeviceManager(_ manager: USBDeviceManager, didConnect deviceID: Int) {
-        log("USB: iPad connected (device ID: \(deviceID))")
+extension AppDelegate: FrameTransportDelegate {
+    func transportDidConnect(_ transport: FrameTransport, endpointName: String) {
+        log("Transport: connected to \(endpointName)")
 
         updateStatusIcon(connected: true)
         updateStatus("Connected - Streaming", state: .connected)
 
-        // Reset flow control for fresh connection
-        usbDeviceManager.resetFlowControl()
+        transport.resetFlowControl()
         frameNumber = 0
 
-        // Send display configuration with effective dimensions
         let config = DisplayConfigMessage(
             width: UInt32(effectiveWidth),
             height: UInt32(effectiveHeight),
             refreshRate: Float(virtualDisplayManager.refreshRate)
         )
-        log("USB: Sending display config \(effectiveWidth)x\(effectiveHeight)")
-        manager.sendMessage(type: .displayConfig, payload: config.toData())
+        log("Transport: Sending display config \(effectiveWidth)x\(effectiveHeight)")
+        transport.sendMessage(type: .displayConfig, payload: config.toData())
 
-        // Start capture and encoding
         startCaptureAndEncoding()
     }
 
-    func usbDeviceManager(_ manager: USBDeviceManager, didDisconnect deviceID: Int) {
-        log("USB: iPad disconnected (device ID: \(deviceID))")
+    func transportDidDisconnect(_ transport: FrameTransport) {
+        log("Transport: disconnected")
 
         updateStatusIcon(connected: false)
-        updateStatus("iPad disconnected", state: isRunning ? .waiting : .idle)
+        updateStatus("Disconnected", state: isRunning ? .waiting : .idle)
 
-        // Stop capture but keep virtual display
         if #available(macOS 14.0, *) {
             Task {
                 await screenCaptureManager.stopCapture()
                 await MainActor.run {
                     h264Encoder.stop()
                     frameNumber = 0
-                    // Update status after cleanup is done
                     if isRunning {
-                        updateStatus("Waiting for iPad...", state: .waiting)
+                        updateStatus("Waiting for connection...", state: .waiting)
                     }
                 }
-            }
-        } else {
-            h264Encoder.stop()
-            frameNumber = 0
-            if isRunning {
-                updateStatus("Waiting for iPad...", state: .waiting)
             }
         }
     }
 
-    func usbDeviceManager(_ manager: USBDeviceManager, didReceive data: Data, fromDevice deviceID: Int) {
-        // Parse received message
+    func transport(_ transport: FrameTransport, didReceive data: Data) {
         guard let header = MessageHeader.from(data: data) else {
             print("ExternalScreen Mac: Invalid message header")
             return
@@ -665,9 +653,5 @@ extension AppDelegate: USBDeviceManagerDelegate {
         default:
             print("ExternalScreen Mac: Received message type: \(header.type)")
         }
-    }
-
-    func usbDeviceManager(_ manager: USBDeviceManager, didFailWithError error: Error) {
-        print("ExternalScreen Mac: USB error: \(error)")
     }
 }
