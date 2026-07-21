@@ -6,12 +6,15 @@ External Screen captures your Mac's screen content, encodes it as H.264 video, a
 
 ## Features
 
-- **Low-latency USB streaming** - No network required, just plug in via USB
+- **Low-latency USB streaming** - Stream to iPad over USB (no network required)
+- **Mac-to-Mac network streaming** - Stream to another Mac over your local network or Thunderbolt (receiver mode)
 - **H.264 hardware encoding/decoding** - Leverages VideoToolbox for efficient video compression
-- **Metal rendering** - GPU-accelerated display on iPad
-- **Touch input** - Interact with your Mac via iPad touch gestures
+- **Metal rendering** - GPU-accelerated display on iPad and Mac
+- **Touch input** - Interact with your Mac via iPad touch gestures (iPad receiver mode)
+- **Cursor streaming** - Smooth cursor motion independent of frame rate (Mac-to-Mac mode)
 - **Virtual display** - Creates a dedicated virtual screen (no mirroring your main display)
 - **Multiple resolution presets** - Choose from 4 resolution tiers to balance quality and performance
+- **Bonjour discovery** - Automatic discovery of other Macs running in receiver mode
 
 ## Requirements
 
@@ -75,18 +78,36 @@ The Mac app requires Screen Recording permission to capture screen content:
 
 ## Usage
 
+### iPad Receiver (USB)
+
 1. Launch **ExternalScreenMac** on your Mac (it appears in the menu bar)
 2. Connect your iPad to your Mac via USB
 3. Launch **ExternalScreen** on your iPad
 4. The connection establishes automatically over USB
 5. Your Mac creates a virtual display that streams to the iPad
 
+### Mac Receiver (Local Network)
+
+1. Launch **ExternalScreenMac** on the receiver Mac and select "Receiver mode" from the menu
+2. Launch **ExternalScreenMac** on the host Mac (sender)
+3. The host Mac automatically discovers available receivers via Bonjour
+4. Select the receiver Mac from the menu to connect
+5. The stream appears fullscreen on the receiver Mac
+
 ## Architecture
 
+### iPad Receiver Mode (USB)
 ```
 Mac: Virtual Display -> ScreenCaptureKit -> H264 Encoder -> USB (PeerTalk) -> iPad
 iPad: USB (PeerTalk) -> H264 Decoder -> Metal Renderer -> Display
 iPad: Touch Input -> USB -> Mac: Touch Event Handler -> CGEvents
+```
+
+### Mac Receiver Mode (Local Network)
+```
+Host Mac: Virtual Display -> ScreenCaptureKit -> H264 Encoder -> TCP (Bonjour) -> Receiver Mac
+Receiver Mac: TCP -> H264 Decoder -> Metal Renderer -> Fullscreen Display
+Cursor: Host Mac -> TCP -> Receiver Mac (independent of frame rate)
 ```
 
 ### Project Structure
@@ -94,36 +115,42 @@ iPad: Touch Input -> USB -> Mac: Touch Event Handler -> CGEvents
 ```
 ExternalScreen/
 ├── Shared/                    # Cross-platform protocol & constants
-├── ExternalScreenMac/        # macOS app
+│   ├── Protocol.swift         # Binary message format
+│   ├── Constants.swift        # Ports, presets, flow control
+│   ├── Transport/             # FrameTransport abstraction & implementations
+│   └── Video/                 # Shared H264Decoder & MetalRenderer
+├── ExternalScreenMac/        # macOS app (host & receiver modes)
 │   ├── Sources/
-│   │   ├── App/               # AppDelegate, window management
-│   │   ├── ScreenCapture/     # ScreenCaptureKit integration
-│   │   ├── VideoEncoder/      # H.264 hardware encoding
-│   │   ├── USB/               # PeerTalk device management
-│   │   ├── InputRelay/        # Touch-to-CGEvent translation
-│   │   └── VirtualDisplay/    # Virtual display creation
+│   │   ├── App/               # AppDelegate, window management, mode selection
+│   │   ├── ScreenCapture/     # ScreenCaptureKit (host mode)
+│   │   ├── VideoEncoder/      # H.264 encoding (host mode)
+│   │   ├── USB/               # PeerTalk device management (host mode)
+│   │   ├── InputRelay/        # Touch-to-CGEvent, cursor streaming
+│   │   ├── VirtualDisplay/    # Virtual display (host mode)
+│   │   └── Receiver/          # ReceiverSessionController (receiver mode)
 │   └── Vendor/PeerTalk/       # USB communication library
 ├── ExternalScreenIOS/        # iPadOS app
 │   ├── Sources/
 │   │   ├── App/               # AppDelegate, display controller
-│   │   ├── Renderer/          # Metal rendering + shaders
-│   │   ├── Touch/             # Touch capture (normalized coords)
 │   │   ├── USB/               # PeerTalk connection manager
-│   │   └── VideoDecoder/      # H.264 hardware decoding
+│   │   └── Touch/             # Touch capture (normalized coords)
 │   └── Vendor/PeerTalk/
-└── Vendor/PeerTalk/           # Original PeerTalk source
+└── Vendor/PeerTalk/           # Original PeerTalk source (submodule)
 ```
 
 ## Configuration
 
 Resolution presets are defined in `Shared/Constants.swift`. The default is **medium** (1440x1005 @ 25 Mbps). Other presets: low, high, and ultra.
 
+**Mac-to-Mac mode** uses TCP port 2346 with Bonjour discovery. Receiver resolution is native (Retina HiDPI), with H.264 bitrate scaled to ~10 bits/pixel/second and capped at 80 Mbps.
+
 Flow control uses an ack-based system with a maximum of 4 in-flight frames to prevent congestion without stalling the pipeline.
 
 ## Dependencies
 
 - **[PeerTalk](https://github.com/rsms/peertalk)** (MIT) - USB communication via usbmuxd (vendored)
-- **Apple Frameworks**: ScreenCaptureKit, VideoToolbox, CoreMedia, Metal, MetalKit
+- **Apple Frameworks**: ScreenCaptureKit, VideoToolbox, CoreMedia, Metal, MetalKit, Network (for TCP), Combine (for Bonjour discovery)
+- **macOS 14.0+**, **iOS/iPadOS 17.0+** - Supports both iPad and Mac receivers
 
 ## Contributing
 

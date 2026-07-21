@@ -11,5 +11,9 @@
     <!-- Allow outgoing network connections (for USB tunneling) -->
     <key>com.apple.security.network.client</key>
     <true/>
+
+    <!-- Listen for host connections in Receiver mode -->
+    <key>com.apple.security.network.server</key>
+    <true/>
 </dict>
 </plist>
