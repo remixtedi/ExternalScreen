@@ -207,18 +207,42 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let receiver = discoveredReceivers[sender.tag]
         log("Connecting to Mac receiver: \(receiver.name)")
 
-        // Tear down any current session
+        // Tear down any current network session
         networkTransport?.disconnect()
 
-        targetKind = .macReceiver
-        let transport = NetworkHostTransport(endpoint: receiver.endpoint, name: receiver.name)
-        transport.transportDelegate = self
-        networkTransport = transport
+        func beginConnection() {
+            targetKind = .macReceiver
+            let transport = NetworkHostTransport(endpoint: receiver.endpoint, name: receiver.name)
+            transport.transportDelegate = self
+            networkTransport = transport
 
-        if !isRunning {
-            startPipeline()
+            if !isRunning {
+                startPipeline()
+            }
+            transport.start()
         }
-        transport.start()
+
+        // An iPad session must not run concurrently with a Mac receiver session.
+        guard usbDeviceManager.isConnected else {
+            beginConnection()
+            return
+        }
+
+        log("connectToReceiver: Tearing down live iPad session before connecting to Mac receiver")
+        if #available(macOS 14.0, *) {
+            Task {
+                await screenCaptureManager.stopCapture()
+                await MainActor.run {
+                    h264Encoder.stop()
+                    usbDeviceManager.disconnect()
+                    beginConnection()
+                }
+            }
+        } else {
+            h264Encoder.stop()
+            usbDeviceManager.disconnect()
+            beginConnection()
+        }
     }
 
     private func reinitializeComponentsWithCurrentPreset() {
@@ -472,6 +496,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Orientation Handling
 
     private func handleOrientationChange(_ orientation: ScreenOrientation) {
+        guard targetKind == .iPad else { return }
+
         let newIsPortrait = (orientation == .portrait)
         guard newIsPortrait != isPortrait else {
             log("handleOrientationChange: Already in \(orientation), ignoring")
@@ -537,13 +563,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         log("startCaptureAndEncoding: Complete")
     }
 
-    private func handleDisplayCapabilities(_ caps: DisplayCapabilitiesMessage) {
+    private func handleDisplayCapabilities(_ caps: DisplayCapabilitiesMessage, from transport: FrameTransport) {
         log("Receiver capabilities: \(caps.pixelWidth)x\(caps.pixelHeight) @\(caps.scale)x")
 
         if #available(macOS 14.0, *) {
             Task {
                 await screenCaptureManager.stopCapture()
                 await MainActor.run {
+                    guard transport === self.networkTransport else {
+                        log("handleDisplayCapabilities: Stale transport, aborting reconfiguration")
+                        return
+                    }
+
                     h264Encoder.stop()
 
                     let w = Int(caps.pixelWidth)
@@ -556,6 +587,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     log("reconfigureForReceiver(\(w)x\(h)) -> \(ok), displayID=\(virtualDisplayManager.displayID)")
                     guard ok else {
                         updateStatus("Failed to create display", state: .idle)
+                        networkTransport?.disconnect()
+                        reinitializeComponentsWithCurrentPreset()
                         return
                     }
 
@@ -590,7 +623,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     // Give WindowServer/SCK a moment to register the reconfigured display
                     Task {
                         try? await Task.sleep(nanoseconds: 500_000_000)
-                        await MainActor.run { self.startCaptureAndEncoding() }
+                        await MainActor.run {
+                            guard transport === self.networkTransport else {
+                                self.log("handleDisplayCapabilities: Stale transport after delay, skipping startCaptureAndEncoding")
+                                return
+                            }
+                            self.startCaptureAndEncoding()
+                        }
                     }
                 }
             }
@@ -729,6 +768,12 @@ extension AppDelegate: H264EncoderDelegate {
 
 extension AppDelegate: FrameTransportDelegate {
     func transportDidConnect(_ transport: FrameTransport, endpointName: String) {
+        if transport === usbDeviceManager && targetKind == .macReceiver {
+            log("iPad connect ignored during Mac receiver session")
+            usbDeviceManager.disconnect()
+            return
+        }
+
         log("Transport: connected to \(endpointName)")
         updateStatusIcon(connected: true)
         updateStatus("Connected - Streaming", state: .connected)
@@ -805,7 +850,7 @@ extension AppDelegate: FrameTransportDelegate {
 
         case .displayCapabilities:
             if let caps = DisplayCapabilitiesMessage.from(data: payload) {
-                handleDisplayCapabilities(caps)
+                handleDisplayCapabilities(caps, from: transport)
             }
 
         default:

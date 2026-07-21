@@ -116,6 +116,13 @@ final class VirtualDisplayManager {
     /// pixel resolution with HiDPI scaling. Returns true on success.
     @discardableResult
     func reconfigureForReceiver(pixelWidth: Int, pixelHeight: Int, refreshRate rate: Double) -> Bool {
+        // Save the prior configuration so we can roll back if the new one fails to apply.
+        let previousWidth = width
+        let previousHeight = height
+        let previousRefreshRate = refreshRate
+        let previousDisplayName = displayName
+        let previousSerialNum = serialNum
+
         if isRunning {
             bridge.destroyDisplay()
             isRunning = false
@@ -127,7 +134,19 @@ final class VirtualDisplayManager {
         displayName = "Mac External Display"
         serialNum = 0xE0190D02  // distinct identity so macOS remembers arrangement separately from iPad
 
-        return start()
+        if start() {
+            return true
+        }
+
+        print("VirtualDisplayManager: reconfigureForReceiver failed, rolling back to previous configuration")
+        width = previousWidth
+        height = previousHeight
+        refreshRate = previousRefreshRate
+        displayName = previousDisplayName
+        serialNum = previousSerialNum
+        start()  // best-effort restore; caller still treats this reconfigure as failed
+
+        return false
     }
 
     /// Updates the display resolution
