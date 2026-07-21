@@ -1,20 +1,12 @@
 import Foundation
 
-/// Delegate for USB device events
-protocol USBDeviceManagerDelegate: AnyObject {
-    func usbDeviceManager(_ manager: USBDeviceManager, didConnect deviceID: Int)
-    func usbDeviceManager(_ manager: USBDeviceManager, didDisconnect deviceID: Int)
-    func usbDeviceManager(_ manager: USBDeviceManager, didReceive data: Data, fromDevice deviceID: Int)
-    func usbDeviceManager(_ manager: USBDeviceManager, didFailWithError error: Error)
-}
-
 /// Manages USB device discovery and communication using PeerTalk
 /// Mac uses PTUSBHub to detect iOS devices and CONNECTS to them
 final class USBDeviceManager: NSObject {
 
     // MARK: - Properties
 
-    weak var delegate: USBDeviceManagerDelegate?
+    weak var transportDelegate: FrameTransportDelegate?
 
     private var peerChannel: PTChannel?
     private var connectedDeviceID: NSNumber?
@@ -34,17 +26,7 @@ final class USBDeviceManager: NSObject {
 
     // MARK: - Flow Control
 
-    /// Last frame number sent to iPad
-    private var lastSentFrameNumber: UInt32 = 0
-
-    /// Last frame number acknowledged by iPad
-    private var lastAckedFrameNumber: UInt32 = 0
-
-    /// Lock protecting flow control state
-    private let flowControlLock = NSLock()
-
-    /// Number of dropped frames (for debug logging)
-    private(set) var droppedFrameCount: UInt64 = 0
+    private let flowControl = FlowControlState()
 
     // MARK: - Initialization
 
@@ -221,43 +203,32 @@ final class USBDeviceManager: NSObject {
 
         sendMessage(type: .frameData, payload: payload)
 
-        flowControlLock.lock()
-        lastSentFrameNumber = frameNumber
-        flowControlLock.unlock()
+        flowControl.recordSent(frameNumber)
     }
 
     /// Checks whether the pipeline can accept a new frame without exceeding the in-flight limit
     func canSendFrame() -> Bool {
-        flowControlLock.lock()
-        let inFlight = lastSentFrameNumber &- lastAckedFrameNumber
-        flowControlLock.unlock()
-        return inFlight <= ExternalScreenConstants.maxInFlightFrames
+        flowControl.canSend(maxInFlight: ExternalScreenConstants.maxInFlightFrames)
     }
 
     /// Records that a frame ack was received from the iPad
     func acknowledgeFrame(_ frameNumber: UInt32) {
-        flowControlLock.lock()
-        // Only advance forward (handle wrap-around with unsigned comparison)
-        if frameNumber &- lastAckedFrameNumber < 0x8000_0000 {
-            lastAckedFrameNumber = frameNumber
-        }
-        flowControlLock.unlock()
+        flowControl.recordAck(frameNumber)
     }
 
     /// Resets flow control state (call on new connection)
     func resetFlowControl() {
-        flowControlLock.lock()
-        lastSentFrameNumber = 0
-        lastAckedFrameNumber = 0
-        droppedFrameCount = 0
-        flowControlLock.unlock()
+        flowControl.reset()
     }
 
     /// Increments the dropped frame counter
     func incrementDroppedFrames() {
-        flowControlLock.lock()
-        droppedFrameCount += 1
-        flowControlLock.unlock()
+        flowControl.recordDropped()
+    }
+
+    /// Number of dropped frames (for debug logging)
+    var droppedFrameCount: UInt64 {
+        flowControl.droppedFrameCount
     }
 
     /// Whether a device is currently connected
@@ -349,7 +320,7 @@ final class USBDeviceManager: NSObject {
                 self.connectedDeviceID = deviceID
 
                 DispatchQueue.main.async {
-                    self.delegate?.usbDeviceManager(self, didConnect: deviceID.intValue)
+                    self.transportDelegate?.transportDidConnect(self, endpointName: "iPad (device \(deviceID))")
                 }
             }
         }
@@ -362,13 +333,11 @@ final class USBDeviceManager: NSObject {
 
         peerChannel?.close()
         peerChannel = nil
-
-        let id = deviceID.intValue
         connectedDeviceID = nil
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.delegate?.usbDeviceManager(self, didDisconnect: id)
+            self.transportDelegate?.transportDidDisconnect(self)
         }
     }
 
@@ -423,8 +392,7 @@ extension USBDeviceManager: PTChannelDelegate {
         // Avoids main thread which can be blocked during window dragging (NSEventTracking).
         receiveQueue.async { [weak self] in
             guard let self = self else { return }
-            let deviceID = self.connectedDeviceID?.intValue ?? 0
-            self.delegate?.usbDeviceManager(self, didReceive: data, fromDevice: deviceID)
+            self.transportDelegate?.transport(self, didReceive: data)
         }
     }
 
@@ -432,7 +400,6 @@ extension USBDeviceManager: PTChannelDelegate {
         log("USBDeviceManager: Channel ended. Error: \(String(describing: error))")
 
         if channel === peerChannel {
-            let deviceID = connectedDeviceID?.intValue ?? 0
             let deviceIDNumber = connectedDeviceID
             peerChannel = nil
             connectedDeviceID = nil
@@ -440,7 +407,7 @@ extension USBDeviceManager: PTChannelDelegate {
 
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
-                self.delegate?.usbDeviceManager(self, didDisconnect: deviceID)
+                self.transportDelegate?.transportDidDisconnect(self)
             }
 
             // Auto-reconnect after a short delay if we're still listening
@@ -459,3 +426,7 @@ extension USBDeviceManager: PTChannelDelegate {
         }
     }
 }
+
+// MARK: - FrameTransport
+
+extension USBDeviceManager: FrameTransport {}

@@ -22,6 +22,51 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var h264Encoder: H264Encoder!
     private var usbDeviceManager: USBDeviceManager!
     private var touchEventHandler: TouchEventHandler!
+    private var cursorStreamer = CursorStreamer()
+
+    // Mac-to-Mac networking
+    /// Guards all reads/writes of `_networkTransport`. `H264Encoder.didEncode` fires on a
+    /// private serial queue and reads `activeTransport` there, while the main thread
+    /// nils/assigns `networkTransport` on connect/disconnect/teardown. Without this lock,
+    /// that's an unsynchronized strong-ref race (use-after-free window on cable unplug
+    /// mid-stream). Never hold this lock while calling into the transport itself — the
+    /// accessors below snapshot the reference, unlock, then return it.
+    private let transportLock = NSLock()
+    private var _networkTransport: NetworkHostTransport?
+    private var networkTransport: NetworkHostTransport? {
+        get {
+            transportLock.lock()
+            defer { transportLock.unlock() }
+            return _networkTransport
+        }
+        set {
+            transportLock.lock()
+            _networkTransport = newValue
+            transportLock.unlock()
+        }
+    }
+    private var receiverBrowser: ReceiverBrowser!
+    private var discoveredReceivers: [DiscoveredReceiver] = []
+    private var receiversMenu: NSMenu!
+    private var receiverSession: ReceiverSessionController?
+
+    /// The transport currently carrying the stream (PeerTalk for iPad by default).
+    /// Snapshots `_networkTransport` under `transportLock` so callers on the encoder's
+    /// private serial queue never race with main-thread connect/disconnect.
+    private var activeTransport: FrameTransport {
+        transportLock.lock()
+        let transport = _networkTransport
+        transportLock.unlock()
+        return transport ?? usbDeviceManager
+    }
+
+    private enum TargetKind { case iPad, macReceiver }
+    private var targetKind: TargetKind = .iPad
+    /// Guards against re-entrant `connectToReceiver` calls (e.g. a double-click on the menu item).
+    private var isConnectingToReceiver = false
+
+    /// UserDefaults key controlling whether receiver standby auto-starts (default: on).
+    private static let receiverEnabledKey = "receiverEnabled"
 
     // State
     private var isRunning = false
@@ -63,9 +108,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
 
+        UserDefaults.standard.register(defaults: [Self.receiverEnabledKey: true])
+
         setupStatusBarItem()
         initializeComponents()
         showMainWindow()
+
+        if UserDefaults.standard.bool(forKey: Self.receiverEnabledKey) {
+            startReceiverStandby()
+        }
 
         // Request screen recording permission
         Task {
@@ -75,6 +126,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         stopPipeline()
+        receiverSession?.stop()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -121,6 +173,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         presetMenuItem.submenu = presetMenu
         menu.addItem(presetMenuItem)
 
+        receiversMenu = NSMenu()
+        let receiversMenuItem = NSMenuItem(title: "Connect to Mac", action: nil, keyEquivalent: "")
+        receiversMenuItem.submenu = receiversMenu
+        menu.addItem(receiversMenuItem)
+        rebuildReceiversMenu()
+
+        let allowReceiverItem = NSMenuItem(title: "Allow Using as Display", action: #selector(toggleReceiverEnabled(_:)), keyEquivalent: "r")
+        allowReceiverItem.target = self
+        allowReceiverItem.state = UserDefaults.standard.bool(forKey: Self.receiverEnabledKey) ? .on : .off
+        menu.addItem(allowReceiverItem)
+
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Show Window", action: #selector(showMainWindow), keyEquivalent: "w"))
         menu.addItem(NSMenuItem.separator())
@@ -130,6 +193,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func selectPreset(_ sender: NSMenuItem) {
+        guard targetKind == .iPad else {
+            log("Preset change ignored: Mac receiver uses native resolution")
+            return
+        }
+
         let allPresets = DisplayPreset.allCases
         guard sender.tag >= 0 && sender.tag < allPresets.count else {
             log("selectPreset: Invalid tag \(sender.tag)")
@@ -157,6 +225,119 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             log("selectPreset: Reinitializing components with new preset...")
             reinitializeComponentsWithCurrentPreset()
         }
+    }
+
+    // MARK: - Receiver Discovery
+
+    private func rebuildReceiversMenu() {
+        receiversMenu.removeAllItems()
+        if discoveredReceivers.isEmpty {
+            let empty = NSMenuItem(title: "No Macs found", action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            receiversMenu.addItem(empty)
+            return
+        }
+        for (index, receiver) in discoveredReceivers.enumerated() {
+            let item = NSMenuItem(title: receiver.name, action: #selector(connectToReceiver(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = index
+            receiversMenu.addItem(item)
+        }
+    }
+
+    @objc private func connectToReceiver(_ sender: NSMenuItem) {
+        guard sender.tag >= 0 && sender.tag < discoveredReceivers.count else { return }
+        guard !isConnectingToReceiver else {
+            log("connectToReceiver: Already connecting, ignoring duplicate request")
+            return
+        }
+        isConnectingToReceiver = true
+
+        let receiver = discoveredReceivers[sender.tag]
+        log("Connecting to Mac receiver: \(receiver.name)")
+
+        // Tear down any current network session
+        networkTransport?.disconnect()
+
+        func beginConnection() {
+            targetKind = .macReceiver
+            let transport = NetworkHostTransport(endpoint: receiver.endpoint, name: receiver.name)
+            transport.transportDelegate = self
+            networkTransport = transport
+
+            if !isRunning {
+                startPipeline()
+            }
+            transport.start()
+            isConnectingToReceiver = false
+        }
+
+        // An iPad session must not run concurrently with a Mac receiver session.
+        guard usbDeviceManager.isConnected else {
+            beginConnection()
+            return
+        }
+
+        log("connectToReceiver: Tearing down live iPad session before connecting to Mac receiver")
+        if #available(macOS 14.0, *) {
+            Task {
+                await screenCaptureManager.stopCapture()
+                await MainActor.run {
+                    h264Encoder.stop()
+                    usbDeviceManager.disconnect()
+                    beginConnection()
+                }
+            }
+        } else {
+            h264Encoder.stop()
+            usbDeviceManager.disconnect()
+            beginConnection()
+        }
+    }
+
+    /// "Allow Using as Display" checkbox: flips the persisted pref and starts/stops
+    /// receiver standby to match.
+    @objc private func toggleReceiverEnabled(_ sender: NSMenuItem) {
+        let newValue = sender.state != .on
+        UserDefaults.standard.set(newValue, forKey: Self.receiverEnabledKey)
+        sender.state = newValue ? .on : .off
+        log("toggleReceiverEnabled: \(newValue ? "enabled" : "disabled")")
+
+        if newValue {
+            startReceiverStandby()
+        } else {
+            stopReceiverStandby()
+        }
+    }
+
+    /// Starts the long-lived receiver service in standby (listening + advertising, no
+    /// window). It auto-activates into a fullscreen receiver when a host connects, and
+    /// auto-returns to standby on disconnect/Esc — see `ReceiverSessionController`.
+    private func startReceiverStandby() {
+        guard receiverSession == nil else { return }
+        log("Starting receiver standby")
+
+        let session = ReceiverSessionController()
+        // Mutual exclusion (host busy -> reject incoming handshake): queried on the main
+        // thread from ReceiverSessionController's handshake handler.
+        session.isHostBusy = { [weak self] in self?.isRunning ?? false }
+        session.onExit = { [weak self] in
+            self?.receiverSession = nil
+            self?.log("Receiver standby stopped")
+        }
+        do {
+            try session.start()
+            receiverSession = session
+        } catch {
+            log("Failed to start receiver standby: \(error)")
+            showAlert(title: "Receiver Mode Failed",
+                      message: "Could not listen on port \(ExternalScreenConstants.networkPort): \(error.localizedDescription)")
+        }
+    }
+
+    /// Fully stops the receiver service (including the transport listener).
+    private func stopReceiverStandby() {
+        receiverSession?.stop()
     }
 
     private func reinitializeComponentsWithCurrentPreset() {
@@ -200,17 +381,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 // Reset frame counter for clean restart
                 frameNumber = 0
                 didDropFrames = false
-                usbDeviceManager.resetFlowControl()
+                activeTransport.resetFlowControl()
 
                 // Restart if iPad is connected
-                if usbDeviceManager.connected {
+                if activeTransport.isConnected {
                     // Send updated display config with effective dimensions
                     let config = DisplayConfigMessage(
                         width: UInt32(w),
                         height: UInt32(h),
                         refreshRate: Float(ExternalScreenConstants.defaultRefreshRate)
                     )
-                    usbDeviceManager.sendMessage(type: .displayConfig, payload: config.toData())
+                    activeTransport.sendMessage(type: .displayConfig, payload: config.toData())
 
                     // Wait for ScreenCaptureKit to detect the updated display
                     try? await Task.sleep(nanoseconds: 500_000_000)
@@ -238,11 +419,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         h264Encoder.delegate = self
 
         usbDeviceManager = USBDeviceManager()
-        usbDeviceManager.delegate = self
+        usbDeviceManager.transportDelegate = self
 
         touchEventHandler = TouchEventHandler()
 
         print("ExternalScreen Mac: Components initialized with preset \(currentPreset.rawValue) (\(currentPreset.description))")
+
+        // Started once here (not in startPipeline) so "Connect to Mac" is always populated,
+        // whether or not the host pipeline is running.
+        receiverBrowser = ReceiverBrowser()
+        let localName = Host.current().localizedName
+        receiverBrowser.onResultsChanged = { [weak self] receivers in
+            // Exclude this Mac's own advertised name: prevents a self-connect entry when
+            // this Mac's receiver standby is also advertising via Bonjour.
+            self?.discoveredReceivers = receivers.filter { $0.name != localName }
+            self?.rebuildReceiversMenu()
+        }
+        receiverBrowser.start()
     }
 
     private func requestScreenCapturePermission() async {
@@ -281,6 +474,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Called by MainWindow when resolution picker changes
     func setPreset(_ preset: DisplayPreset) {
+        guard targetKind == .iPad else {
+            log("Preset change ignored: Mac receiver uses native resolution")
+            return
+        }
         guard preset != currentPreset else { return }
 
         log("setPreset: Setting preset to \(preset.rawValue) (\(preset.description))")
@@ -306,6 +503,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func startPipeline() {
+        // Block only while the receiver session is actively streaming from another host;
+        // standby (listening, no window) does not prevent this Mac from also hosting.
+        guard receiverSession?.state != .active else {
+            log("startPipeline: Ignored - receiver mode active")
+            return
+        }
         guard !isRunning else {
             log("startPipeline: Already running")
             return
@@ -359,25 +562,43 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Stop capture and encoding, but keep USB listener active for reconnection
         if #available(macOS 14.0, *) {
             Task {
-                // Wait for screen capture to fully stop first
-                await screenCaptureManager.stopCapture()
-
-                // Then stop encoder on main thread
-                await MainActor.run {
-                    h264Encoder.stop()
-                    // Disconnect USB channel but keep listener active for quick reconnect
-                    usbDeviceManager.disconnect()
-                    // Keep virtual display active to preserve position settings
-                    // virtualDisplayManager.stop() - commented out to preserve position
-
-                    updateStatusIcon(connected: false)
-                    updateStatus("Stopped", state: .idle)
-                    print("ExternalScreen Mac: Pipeline stopped (virtual display preserved)")
-                }
+                await stopPipelineTeardown()
             }
         } else {
             h264Encoder.stop()
             usbDeviceManager.disconnect()
+            networkTransport?.disconnect()
+            networkTransport = nil
+            targetKind = .iPad
+            isConnectingToReceiver = false
+            cursorStreamer.stop()
+            // Keep virtual display active to preserve position settings
+
+            updateStatusIcon(connected: false)
+            updateStatus("Stopped", state: .idle)
+            print("ExternalScreen Mac: Pipeline stopped (virtual display preserved)")
+        }
+    }
+
+    /// Awaited teardown used by `stopPipeline()`: waits for screen capture to fully stop,
+    /// then performs the remaining synchronous teardown on the main actor. The receiver
+    /// browser is intentionally left running (started once at launch) so "Connect to Mac"
+    /// stays populated regardless of host pipeline state.
+    @available(macOS 14.0, *)
+    private func stopPipelineTeardown() async {
+        // Wait for screen capture to fully stop first
+        await screenCaptureManager.stopCapture()
+
+        // Then stop encoder on main thread
+        await MainActor.run {
+            h264Encoder.stop()
+            // Disconnect USB channel but keep listener active for quick reconnect
+            usbDeviceManager.disconnect()
+            networkTransport?.disconnect()
+            networkTransport = nil
+            targetKind = .iPad
+            isConnectingToReceiver = false
+            cursorStreamer.stop()
             // Keep virtual display active to preserve position settings
 
             updateStatusIcon(connected: false)
@@ -389,6 +610,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Orientation Handling
 
     private func handleOrientationChange(_ orientation: ScreenOrientation) {
+        guard targetKind == .iPad else { return }
+
         let newIsPortrait = (orientation == .portrait)
         guard newIsPortrait != isPortrait else {
             log("handleOrientationChange: Already in \(orientation), ignoring")
@@ -452,6 +675,106 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         log("startCaptureAndEncoding: Complete")
+    }
+
+    private func handleDisplayCapabilities(_ caps: DisplayCapabilitiesMessage, from transport: FrameTransport) {
+        log("Receiver capabilities: \(caps.pixelWidth)x\(caps.pixelHeight) @\(caps.scale)x")
+
+        if #available(macOS 14.0, *) {
+            Task {
+                await screenCaptureManager.stopCapture()
+                await MainActor.run {
+                    guard transport === self.networkTransport else {
+                        log("handleDisplayCapabilities: Stale transport, aborting reconfiguration")
+                        return
+                    }
+
+                    h264Encoder.stop()
+
+                    let w = Int(caps.pixelWidth)
+                    let h = Int(caps.pixelHeight)
+                    let scale = CGFloat(caps.scale)
+
+                    // The virtual display's CGVirtualDisplayMode is created at the
+                    // receiver's LOGICAL (point) size with hiDPI backing -- see
+                    // VirtualDisplayManager.reconfigureForReceiver. Capture/encode below
+                    // continue to use the receiver's PIXEL dims (w, h) unchanged, since
+                    // ScreenCaptureKit captures a HiDPI display's Retina backing at 1:1,
+                    // and the receiver renders the stream at its native pixel resolution.
+                    let ok = virtualDisplayManager.reconfigureForReceiver(
+                        pixelWidth: w, pixelHeight: h, scale: scale,
+                        refreshRate: ExternalScreenConstants.defaultRefreshRate
+                    )
+                    log("reconfigureForReceiver(\(w)x\(h) @\(caps.scale)x) -> \(ok), displayID=\(virtualDisplayManager.displayID)")
+                    guard ok else {
+                        updateStatus("Failed to create display", state: .idle)
+                        networkTransport?.disconnect()
+                        // NetworkHostTransport.disconnect() sets connected=false synchronously, so the
+                        // later .cancelled event sees wasConnected==false and never fires
+                        // transportDidDisconnect. Reset these fields ourselves so the iPad path isn't
+                        // permanently locked out by the transportDidConnect mutual-exclusion guard.
+                        networkTransport = nil
+                        targetKind = .iPad
+                        reinitializeComponentsWithCurrentPreset()
+                        if !virtualDisplayManager.isActive {
+                            virtualDisplayManager.start()
+                        }
+                        return
+                    }
+
+                    // Confirm points-vs-pixels behavior: CGDisplayBounds reports the
+                    // display's logical (point) size, which should be roughly pixel dims /
+                    // scale -- not equal to the receiver's raw pixel dims.
+                    let boundsAfterReconfigure = CGDisplayBounds(virtualDisplayManager.displayID)
+                    log("Display bounds after reconfigure: \(Int(boundsAfterReconfigure.width))x\(Int(boundsAfterReconfigure.height)) points vs receiver pixel dims \(w)x\(h) (@\(caps.scale)x)")
+
+                    // Bitrate: ~10 bits/pixel/sec, capped at 80 Mbps, floor 25 Mbps
+                    let bitrate = min(80_000_000, max(25_000_000, w * h * 10))
+                    h264Encoder = H264Encoder(
+                        width: w, height: h,
+                        frameRate: Int(ExternalScreenConstants.defaultRefreshRate),
+                        bitrate: bitrate,
+                        keyframeInterval: ExternalScreenConstants.networkKeyframeInterval
+                    )
+                    h264Encoder.delegate = self
+
+                    screenCaptureManager = ScreenCaptureManager(
+                        width: w, height: h,
+                        frameRate: Int(ExternalScreenConstants.defaultRefreshRate),
+                        showsCursor: false  // cursor is streamed separately (Task 8)
+                    )
+                    screenCaptureManager.delegate = self
+
+                    frameNumber = 0
+                    didDropFrames = false
+                    activeTransport.resetFlowControl()
+
+                    let config = DisplayConfigMessage(
+                        width: caps.pixelWidth,
+                        height: caps.pixelHeight,
+                        refreshRate: Float(ExternalScreenConstants.defaultRefreshRate)
+                    )
+                    activeTransport.sendMessage(type: .displayConfig, payload: config.toData())
+
+                    // Give WindowServer/SCK a moment to register the reconfigured display
+                    Task {
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        await MainActor.run {
+                            guard transport === self.networkTransport else {
+                                self.log("handleDisplayCapabilities: Stale transport after delay, skipping startCaptureAndEncoding")
+                                return
+                            }
+                            self.startCaptureAndEncoding()
+                            self.cursorStreamer.start(
+                                displayID: self.virtualDisplayManager.displayID,
+                                transport: transport,
+                                receiverScale: CGFloat(caps.scale)
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private func updateStatusIcon(connected: Bool) {
@@ -541,12 +864,12 @@ extension AppDelegate: ScreenCaptureManagerDelegate {
 extension AppDelegate: H264EncoderDelegate {
     func h264Encoder(_ encoder: H264Encoder, didEncode data: Data, isKeyframe: Bool, presentationTime: CMTime) {
         // Flow control: drop P-frames when pipe is congested, always send keyframes
-        if !isKeyframe && !usbDeviceManager.canSendFrame() {
-            usbDeviceManager.incrementDroppedFrames()
+        if !isKeyframe && !activeTransport.canSendFrame() {
+            activeTransport.incrementDroppedFrames()
             didDropFrames = true
             // Log periodically
-            if usbDeviceManager.droppedFrameCount % 30 == 1 {
-                log("FlowControl: Dropped \(usbDeviceManager.droppedFrameCount) frames total")
+            if activeTransport.droppedFrameCount % 30 == 1 {
+                log("FlowControl: Dropped \(activeTransport.droppedFrameCount) frames total")
             }
             frameNumber += 1
             return
@@ -563,12 +886,12 @@ extension AppDelegate: H264EncoderDelegate {
 
         // Log every 120 frames (about once per second at 120fps)
         if frameNumber % 120 == 0 {
-            log("Encoder: Frame \(frameNumber), size=\(data.count), keyframe=\(isKeyframe), dropped=\(usbDeviceManager.droppedFrameCount)")
+            log("Encoder: Frame \(frameNumber), size=\(data.count), keyframe=\(isKeyframe), dropped=\(activeTransport.droppedFrameCount)")
         }
 
         // Send to connected iPad
         let pts = UInt64(presentationTime.seconds * 1_000_000)
-        usbDeviceManager.sendFrame(
+        activeTransport.sendFrame(
             frameData: data,
             frameNumber: frameNumber,
             isKeyframe: isKeyframe,
@@ -582,62 +905,85 @@ extension AppDelegate: H264EncoderDelegate {
     }
 }
 
-// MARK: - USBDeviceManagerDelegate
+// MARK: - FrameTransportDelegate
 
-extension AppDelegate: USBDeviceManagerDelegate {
-    func usbDeviceManager(_ manager: USBDeviceManager, didConnect deviceID: Int) {
-        log("USB: iPad connected (device ID: \(deviceID))")
+extension AppDelegate: FrameTransportDelegate {
+    func transportDidConnect(_ transport: FrameTransport, endpointName: String) {
+        if transport === usbDeviceManager && targetKind == .macReceiver {
+            log("iPad connect ignored during Mac receiver session")
+            usbDeviceManager.disconnect()
+            return
+        }
 
+        log("Transport: connected to \(endpointName)")
         updateStatusIcon(connected: true)
         updateStatus("Connected - Streaming", state: .connected)
 
-        // Reset flow control for fresh connection
-        usbDeviceManager.resetFlowControl()
+        transport.resetFlowControl()
         frameNumber = 0
 
-        // Send display configuration with effective dimensions
+        if transport === networkTransport {
+            // Mac receiver: send handshake first, then wait for displayCapabilities.
+            // Version mismatch is checked when the receiver's handshake reply arrives
+            // (see the `.handshake` case below).
+            log("Transport: Mac receiver connected, sending handshake...")
+            let handshake = HandshakeMessage(
+                protocolVersion: ExternalScreenConstants.protocolVersion,
+                deviceName: Host.current().localizedName ?? "Mac"
+            )
+            transport.sendMessage(type: .handshake, payload: handshake.toData())
+            log("Transport: Mac receiver connected, waiting for display capabilities...")
+            return
+        }
+
+        // iPad path (unchanged)
         let config = DisplayConfigMessage(
             width: UInt32(effectiveWidth),
             height: UInt32(effectiveHeight),
             refreshRate: Float(virtualDisplayManager.refreshRate)
         )
-        log("USB: Sending display config \(effectiveWidth)x\(effectiveHeight)")
-        manager.sendMessage(type: .displayConfig, payload: config.toData())
-
-        // Start capture and encoding
+        log("Transport: Sending display config \(effectiveWidth)x\(effectiveHeight)")
+        transport.sendMessage(type: .displayConfig, payload: config.toData())
         startCaptureAndEncoding()
     }
 
-    func usbDeviceManager(_ manager: USBDeviceManager, didDisconnect deviceID: Int) {
-        log("USB: iPad disconnected (device ID: \(deviceID))")
+    func transportDidDisconnect(_ transport: FrameTransport) {
+        log("Transport: disconnected")
+
+        let wasMacReceiver = transport === networkTransport
+        if wasMacReceiver {
+            networkTransport = nil
+            targetKind = .iPad
+            isConnectingToReceiver = false
+            cursorStreamer.stop()
+        }
 
         updateStatusIcon(connected: false)
-        updateStatus("iPad disconnected", state: isRunning ? .waiting : .idle)
+        updateStatus("Disconnected", state: isRunning ? .waiting : .idle)
 
-        // Stop capture but keep virtual display
         if #available(macOS 14.0, *) {
             Task {
                 await screenCaptureManager.stopCapture()
                 await MainActor.run {
                     h264Encoder.stop()
                     frameNumber = 0
-                    // Update status after cleanup is done
+                    if wasMacReceiver {
+                        // A Mac-receiver session left Mac-native-sized components behind;
+                        // rebuild at the current iPad preset so the next iPad connect isn't mismatched.
+                        reinitializeComponentsWithCurrentPreset()
+                        if !virtualDisplayManager.isActive {
+                            virtualDisplayManager.start()
+                        }
+                    }
                     if isRunning {
-                        updateStatus("Waiting for iPad...", state: .waiting)
+                        updateStatus("Waiting for connection...", state: .waiting)
                     }
                 }
-            }
-        } else {
-            h264Encoder.stop()
-            frameNumber = 0
-            if isRunning {
-                updateStatus("Waiting for iPad...", state: .waiting)
             }
         }
     }
 
-    func usbDeviceManager(_ manager: USBDeviceManager, didReceive data: Data, fromDevice deviceID: Int) {
-        // Parse received message
+    func transport(_ transport: FrameTransport, didReceive data: Data) {
         guard let header = MessageHeader.from(data: data) else {
             print("ExternalScreen Mac: Invalid message header")
             return
@@ -652,22 +998,28 @@ extension AppDelegate: USBDeviceManagerDelegate {
                 touchEventHandler.handleTouch(type: header.type, touch: touch)
             }
 
-        case .frameAck:
-            if let ack = FrameAckMessage.from(data: payload) {
-                usbDeviceManager.acknowledgeFrame(ack.frameNumber)
-            }
-
         case .orientationChange:
             if let orientationMsg = OrientationMessage.from(data: payload) {
                 handleOrientationChange(orientationMsg.orientation)
             }
 
+        case .displayCapabilities:
+            if let caps = DisplayCapabilitiesMessage.from(data: payload) {
+                handleDisplayCapabilities(caps, from: transport)
+            }
+
+        case .handshake:
+            if let handshake = HandshakeMessage.from(data: payload) {
+                if handshake.protocolVersion != ExternalScreenConstants.protocolVersion {
+                    log("Handshake: version mismatch (receiver=\(handshake.protocolVersion), expected=\(ExternalScreenConstants.protocolVersion)), disconnecting")
+                    transport.disconnect()
+                } else {
+                    log("Handshake: receiver '\(handshake.deviceName)' confirmed protocol v\(handshake.protocolVersion)")
+                }
+            }
+
         default:
             print("ExternalScreen Mac: Received message type: \(header.type)")
         }
-    }
-
-    func usbDeviceManager(_ manager: USBDeviceManager, didFailWithError error: Error) {
-        print("ExternalScreen Mac: USB error: \(error)")
     }
 }

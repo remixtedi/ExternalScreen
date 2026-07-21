@@ -7,71 +7,116 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		075A9441ECC55494C5C33991 /* NetworkConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9790C1D89BD41AB5B9504B54 /* NetworkConnection.swift */; };
 		0DC532C97E282094824696B4 /* PTChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 93B37B4D2845F28D4DDFC3EC /* PTChannel.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		0FAAC863569B22F85B2317FB /* CursorStreamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B517B2A8F1245BCE7D2390F8 /* CursorStreamer.swift */; };
 		12624D830C96886AF5A0BC4D /* PTUSBHub.m in Sources */ = {isa = PBXBuildFile; fileRef = 2446CA09896F968882B6F288 /* PTUSBHub.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		18CE5D0AF14560E9A5E851FF /* H264Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D847F8BC4217A8FF10FD80 /* H264Decoder.swift */; };
+		1B8DDB96BEDFCDC1631264BB /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7123E40B59B9F4951797F46C /* Metal.framework */; };
+		1CC395AE05B649F366A2DAD6 /* NetworkHostTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435221BEA4A2FD80E6B2C597 /* NetworkHostTransport.swift */; };
+		22C36FB85E3E19DA70874350 /* NetworkHostTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435221BEA4A2FD80E6B2C597 /* NetworkHostTransport.swift */; };
+		28F18D21D93C31085706ED0D /* NetworkReceiverTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BC9F139709135924FAA8C5C /* NetworkReceiverTransport.swift */; };
+		2C6C1DBE72DA310662ED0779 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18C4ED281632D7ED2C2B18C8 /* VideoToolbox.framework */; };
+		2DECAEAC96E5808228FD59C1 /* FlowControlState.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA41A95628DEF8AB74096BD3 /* FlowControlState.swift */; };
+		36AAFDAF657A3D46B808A906 /* H264Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D847F8BC4217A8FF10FD80 /* H264Decoder.swift */; };
+		38234164CC1A3C199628FE87 /* FrameTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BAA22F80ACAFAF6FD7D1681 /* FrameTransport.swift */; };
+		3E0752E96C05D7BBED26B3DF /* ReceiverBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72330608F64186E8DE903DA /* ReceiverBrowser.swift */; };
+		40DAE7BA05D798933F9BC489 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D4CFD47B48FA7BB5DBEA8E6 /* Constants.swift */; };
+		4240177E248F810058B6F255 /* NetworkHostTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435221BEA4A2FD80E6B2C597 /* NetworkHostTransport.swift */; };
+		481710A91A3B00F05C089DE7 /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B361E00B1DA05063943C72 /* MetalRenderer.swift */; };
 		4904C4F852BFCB22D30492A5 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 59378F5E8DADD08131015E3F /* UIKit.framework */; };
+		49430D4822FF86357BF01E96 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A79D1C02BAAEC3C46802D39 /* MetalKit.framework */; };
+		5074403F5A05320F394C34E0 /* NetworkReceiverTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BC9F139709135924FAA8C5C /* NetworkReceiverTransport.swift */; };
+		52EAACD4533D6D63C7A12977 /* Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86CA5CF89C19C2F5FA6C3139 /* Protocol.swift */; };
+		5542CD5B2ECAA49363788861 /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B361E00B1DA05063943C72 /* MetalRenderer.swift */; };
 		56BDC834D182B23EACE6F8C6 /* USBConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C29FC3E8CA0B51711DE0DA38 /* USBConnectionManager.swift */; };
+		5720D4264793F336DFF8BEDE /* MessageDeframer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44ECD2A09194625D41148AC1 /* MessageDeframer.swift */; };
 		59E5112B032038D73AD02252 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7123E40B59B9F4951797F46C /* Metal.framework */; };
 		5D2B3D2E7CB9B8A41C790899 /* PTProtocol.m in Sources */ = {isa = PBXBuildFile; fileRef = D1B7746228DE612737CC77B1 /* PTProtocol.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
-		5E6ED740862E16EE52E16A3D /* H264Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C3AD6543F719AE380AC0C96 /* H264Decoder.swift */; };
+		6396CF2E6721A592685CC6AC /* FlowControlState.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA41A95628DEF8AB74096BD3 /* FlowControlState.swift */; };
 		65B4059064C64A5BA09F79D6 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0681FE3BFB2571EE3FFD5DE /* AppDelegate.swift */; };
 		67332D896F333D3C30F78936 /* TouchEventHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB2A5D532EA0B7C6C699FB07 /* TouchEventHandler.swift */; };
+		6820E5C7A4CF908E9B01870D /* FrameTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BAA22F80ACAFAF6FD7D1681 /* FrameTransport.swift */; };
 		687DE3401F3D9C92C10A083D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ACCEFDDC511068F92542EE99 /* Assets.xcassets */; };
 		6DE052EBC29037C55C15FADD /* Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86CA5CF89C19C2F5FA6C3139 /* Protocol.swift */; };
 		730FCA0A203091580129EA5E /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18C4ED281632D7ED2C2B18C8 /* VideoToolbox.framework */; };
 		7D7D96BE69A3E83A785C5D18 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0D5AD6A0B26DFA057617F36D /* CoreMedia.framework */; };
+		7D9DF7731509C7635311E5E2 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E5F97C577A6D9814A5357848 /* IOKit.framework */; };
 		7E4A72798DABDF5FBE6EEBBD /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D4CFD47B48FA7BB5DBEA8E6 /* Constants.swift */; };
+		84EF88C84E883E57A30ED8AC /* ReceiverBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72330608F64186E8DE903DA /* ReceiverBrowser.swift */; };
 		85255E1A103B00E471DDEE7E /* CGVirtualDisplay+Bridge.m in Sources */ = {isa = PBXBuildFile; fileRef = E92B95570CFD541FDA4E0146 /* CGVirtualDisplay+Bridge.m */; };
 		872057829069E5510F9BC872 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A38AE63741750230993EA26F /* CoreGraphics.framework */; };
+		885D375C4AA6EB609C32E2F4 /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = ED239919AECACB4881610F27 /* Shaders.metal */; };
 		8ACA86027FB4C6A5E3DAA1F2 /* ScreenCaptureKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9717EDD8FA5E05C09BBD7928 /* ScreenCaptureKit.framework */; };
-		8BE864585A2F9727E5677DE9 /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67CDBB3DD4350FDBA02E9D79 /* MetalRenderer.swift */; };
 		8F6501FE0885C64210559D7C /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3320B2DF39E0847E4793FEB4 /* SceneDelegate.swift */; };
 		94A110D4D1E806426A98E260 /* PTChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 8396764110BEFE60B9C70EE4 /* PTChannel.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		981AB008D0453FDDD749F4E0 /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = ED239919AECACB4881610F27 /* Shaders.metal */; };
+		99092695B85AA634411C4368 /* MessageDeframer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44ECD2A09194625D41148AC1 /* MessageDeframer.swift */; };
 		99C33D063DFBF28D7B277EA6 /* PTProtocol.m in Sources */ = {isa = PBXBuildFile; fileRef = 816C01FE9548FB5810D524B5 /* PTProtocol.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		9C336B96264FEF981E4D8C84 /* FlowControlState.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA41A95628DEF8AB74096BD3 /* FlowControlState.swift */; };
 		9D9B9B242E68ED354C1401DC /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D7AAC182BD9CFA419B901DE0 /* AppKit.framework */; };
+		9F5B396C982A5540EF3ECAF9 /* FrameTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BAA22F80ACAFAF6FD7D1681 /* FrameTransport.swift */; };
+		A8A4AD186FD772B152594AD6 /* MessageDeframer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44ECD2A09194625D41148AC1 /* MessageDeframer.swift */; };
+		A8FA0B55FA0054D0A637E284 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A79D1C02BAAEC3C46802D39 /* MetalKit.framework */; };
 		AB9D9EF78A437712A763BE0B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 28109E0EEE1062DF90E87BB8 /* Assets.xcassets */; };
 		AFE483D4B4ECBE4184ADE655 /* DisplayViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6F9C98DAAD8335B757DF9C0 /* DisplayViewController.swift */; };
+		B1732ED83803C2F3B8201148 /* H264Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D847F8BC4217A8FF10FD80 /* H264Decoder.swift */; };
+		B7705958F9B20C11A5B0287E /* NetworkConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9790C1D89BD41AB5B9504B54 /* NetworkConnection.swift */; };
+		B7F2966AEB24BC7CF4E282E0 /* NetworkReceiverTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BC9F139709135924FAA8C5C /* NetworkReceiverTransport.swift */; };
 		B98A5FCCDD05B0D448CCD5CE /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A79D1C02BAAEC3C46802D39 /* MetalKit.framework */; };
 		BD12F5D3A9C6E950834D9FF3 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18C4ED281632D7ED2C2B18C8 /* VideoToolbox.framework */; };
+		C09B1A8D21F81D116E0F161E /* ReceiverSessionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD641E7AA27954E7AEB954FD /* ReceiverSessionController.swift */; };
+		C1A4854F134989EBC50B1B96 /* FlowControlStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DA380EEC5417C4707A4DE61 /* FlowControlStateTests.swift */; };
 		C72BBE3E14CB03199E44A181 /* H264Encoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B86D1028E71FDA27E76F7FA /* H264Encoder.swift */; };
 		C825A37A4B9D97178787A411 /* TouchCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49AD430355BE6E6D77C189FC /* TouchCaptureView.swift */; };
 		CB304ED54F06D47EAEB90F2B /* ConnectionWaitingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20E14AFCA7603305073F55D2 /* ConnectionWaitingView.swift */; };
-		CFAB7FF2C8E14EACAD0890BE /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 2088AAA754B57C5166B25852 /* Shaders.metal */; };
+		D20E160A0B3710E4DD197ABA /* MessageDeframerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 773D480D0C0326CBDFB5B0DD /* MessageDeframerTests.swift */; };
 		D7DC270A64BF1E22BCE452BB /* ScreenCaptureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECB3EF61EA0153E2B6DD2A27 /* ScreenCaptureManager.swift */; };
 		DB7971F600A6F2C77CD26160 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89C8F1F533E38259836A0B2C /* AppDelegate.swift */; };
 		DE1C1007419A3D902F93C190 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0D5AD6A0B26DFA057617F36D /* CoreMedia.framework */; };
+		DF99861AA39F36E58D1700ED /* ReceiverBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72330608F64186E8DE903DA /* ReceiverBrowser.swift */; };
 		E051D27EF0DB10A10429120B /* Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86CA5CF89C19C2F5FA6C3139 /* Protocol.swift */; };
 		EC7CFB1FFC8F7798AE2E0733 /* PTUSBHub.m in Sources */ = {isa = PBXBuildFile; fileRef = 2D4BA93BD543A017CDA14CC3 /* PTUSBHub.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		EF42FCC52167FD9368D9E563 /* VirtualDisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C601BC53C141D3ADF6B75DAD /* VirtualDisplayManager.swift */; };
 		EF8FB9AF64879C4D7E5643F9 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6076A8CB0797D7FB7CE80CD7 /* MainWindowController.swift */; };
+		F1FA58DD09A1A3CEB961BDF2 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7123E40B59B9F4951797F46C /* Metal.framework */; };
+		F287B3AA86525F5DF66C9C87 /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = ED239919AECACB4881610F27 /* Shaders.metal */; };
+		F30238006C90BCAECDCB0F3A /* ProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01701982C703394CF40A11B8 /* ProtocolTests.swift */; };
+		F4BC265DAC8874881EAEB85E /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B361E00B1DA05063943C72 /* MetalRenderer.swift */; };
+		F98D6292A1EE2E5E3361ED7A /* NetworkConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9790C1D89BD41AB5B9504B54 /* NetworkConnection.swift */; };
 		FAA4DBB95CA147A96EFE18A2 /* USBDeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4BAA42FCAE08C4EBF14659D /* USBDeviceManager.swift */; };
 		FACB940373545F420E083151 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D4CFD47B48FA7BB5DBEA8E6 /* Constants.swift */; };
+		FE116D3C6BF9BC0864AF7A1E /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0D5AD6A0B26DFA057617F36D /* CoreMedia.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		01701982C703394CF40A11B8 /* ProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolTests.swift; sourceTree = "<group>"; };
 		0A79D1C02BAAEC3C46802D39 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
-		0C3AD6543F719AE380AC0C96 /* H264Decoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = H264Decoder.swift; sourceTree = "<group>"; };
 		0D5AD6A0B26DFA057617F36D /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		18C4ED281632D7ED2C2B18C8 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
-		2088AAA754B57C5166B25852 /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
+		1BAA22F80ACAFAF6FD7D1681 /* FrameTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameTransport.swift; sourceTree = "<group>"; };
 		20E14AFCA7603305073F55D2 /* ConnectionWaitingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionWaitingView.swift; sourceTree = "<group>"; };
 		2446CA09896F968882B6F288 /* PTUSBHub.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTUSBHub.m; sourceTree = "<group>"; };
 		28109E0EEE1062DF90E87BB8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2D4BA93BD543A017CDA14CC3 /* PTUSBHub.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTUSBHub.m; sourceTree = "<group>"; };
+		2DA380EEC5417C4707A4DE61 /* FlowControlStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowControlStateTests.swift; sourceTree = "<group>"; };
 		3320B2DF39E0847E4793FEB4 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		3B8039B63D444EF884CF4D7C /* PTDefines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PTDefines.h; sourceTree = "<group>"; };
+		435221BEA4A2FD80E6B2C597 /* NetworkHostTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkHostTransport.swift; sourceTree = "<group>"; };
+		44ECD2A09194625D41148AC1 /* MessageDeframer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageDeframer.swift; sourceTree = "<group>"; };
 		49AD430355BE6E6D77C189FC /* TouchCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchCaptureView.swift; sourceTree = "<group>"; };
 		49C3F57A019F0E9D59C73F8F /* PTPrivate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PTPrivate.h; sourceTree = "<group>"; };
 		4C873C53F9E6442C1C7A6D73 /* ExternalScreenIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ExternalScreenIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		57D847F8BC4217A8FF10FD80 /* H264Decoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = H264Decoder.swift; sourceTree = "<group>"; };
 		5884D1EF07FDC65539853966 /* PTChannel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PTChannel.h; sourceTree = "<group>"; };
 		59378F5E8DADD08131015E3F /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		5B86D1028E71FDA27E76F7FA /* H264Encoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = H264Encoder.swift; sourceTree = "<group>"; };
 		6076A8CB0797D7FB7CE80CD7 /* MainWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowController.swift; sourceTree = "<group>"; };
-		67CDBB3DD4350FDBA02E9D79 /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
 		6D4CFD47B48FA7BB5DBEA8E6 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		6F6E14471293D63C08E46A28 /* CGVirtualDisplay+Bridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "CGVirtualDisplay+Bridge.h"; sourceTree = "<group>"; };
 		7123E40B59B9F4951797F46C /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		71A9067CEFC96EE46AEFC7BF /* ExternalScreenMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ExternalScreenMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		773D480D0C0326CBDFB5B0DD /* MessageDeframerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageDeframerTests.swift; sourceTree = "<group>"; };
 		816C01FE9548FB5810D524B5 /* PTProtocol.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTProtocol.m; sourceTree = "<group>"; };
 		8396764110BEFE60B9C70EE4 /* PTChannel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTChannel.m; sourceTree = "<group>"; };
 		86CA5CF89C19C2F5FA6C3139 /* Protocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Protocol.swift; sourceTree = "<group>"; };
@@ -82,26 +127,47 @@
 		919E4C899DA3A9DCBB0C4C64 /* PTProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PTProtocol.h; sourceTree = "<group>"; };
 		93B37B4D2845F28D4DDFC3EC /* PTChannel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTChannel.m; sourceTree = "<group>"; };
 		9717EDD8FA5E05C09BBD7928 /* ScreenCaptureKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ScreenCaptureKit.framework; path = System/Library/Frameworks/ScreenCaptureKit.framework; sourceTree = SDKROOT; };
+		9790C1D89BD41AB5B9504B54 /* NetworkConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkConnection.swift; sourceTree = "<group>"; };
 		98B0E6ED06A07713A31DCCF9 /* PTUSBHub.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PTUSBHub.h; sourceTree = "<group>"; };
+		9BC9F139709135924FAA8C5C /* NetworkReceiverTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkReceiverTransport.swift; sourceTree = "<group>"; };
 		A38AE63741750230993EA26F /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		A73F60FCCF171668540A35BC /* Peertalk.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Peertalk.h; sourceTree = "<group>"; };
 		AB2A5D532EA0B7C6C699FB07 /* TouchEventHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchEventHandler.swift; sourceTree = "<group>"; };
 		ACCEFDDC511068F92542EE99 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AD641E7AA27954E7AEB954FD /* ReceiverSessionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverSessionController.swift; sourceTree = "<group>"; };
 		B0681FE3BFB2571EE3FFD5DE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		B3B361E00B1DA05063943C72 /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
+		B517B2A8F1245BCE7D2390F8 /* CursorStreamer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorStreamer.swift; sourceTree = "<group>"; };
+		B72330608F64186E8DE903DA /* ReceiverBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverBrowser.swift; sourceTree = "<group>"; };
 		C29FC3E8CA0B51711DE0DA38 /* USBConnectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = USBConnectionManager.swift; sourceTree = "<group>"; };
 		C601BC53C141D3ADF6B75DAD /* VirtualDisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualDisplayManager.swift; sourceTree = "<group>"; };
+		D17D9F090748F3102F340DD6 /* ExternalScreenTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ExternalScreenTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1B7746228DE612737CC77B1 /* PTProtocol.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTProtocol.m; sourceTree = "<group>"; };
 		D6F9C98DAAD8335B757DF9C0 /* DisplayViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayViewController.swift; sourceTree = "<group>"; };
 		D7AAC182BD9CFA419B901DE0 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		DE803364B07300EC556B5F93 /* PTProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PTProtocol.h; sourceTree = "<group>"; };
+		E5F97C577A6D9814A5357848 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		E92B95570CFD541FDA4E0146 /* CGVirtualDisplay+Bridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "CGVirtualDisplay+Bridge.m"; sourceTree = "<group>"; };
+		EA41A95628DEF8AB74096BD3 /* FlowControlState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowControlState.swift; sourceTree = "<group>"; };
 		ECB3EF61EA0153E2B6DD2A27 /* ScreenCaptureManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureManager.swift; sourceTree = "<group>"; };
+		ED239919AECACB4881610F27 /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
 		F3CBA94E99200B1D65A0723A /* Peertalk.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Peertalk.h; sourceTree = "<group>"; };
 		F4BAA42FCAE08C4EBF14659D /* USBDeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = USBDeviceManager.swift; sourceTree = "<group>"; };
 		F63951F9F168415225CD5D63 /* PTDefines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PTDefines.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		82771CC03047313F7DB7B42F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1B8DDB96BEDFCDC1631264BB /* Metal.framework in Frameworks */,
+				A8FA0B55FA0054D0A637E284 /* MetalKit.framework in Frameworks */,
+				2C6C1DBE72DA310662ED0779 /* VideoToolbox.framework in Frameworks */,
+				FE116D3C6BF9BC0864AF7A1E /* CoreMedia.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C5E9DBF2F01C14A8E0459B20 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -111,6 +177,9 @@
 				DE1C1007419A3D902F93C190 /* CoreMedia.framework in Frameworks */,
 				872057829069E5510F9BC872 /* CoreGraphics.framework in Frameworks */,
 				9D9B9B242E68ED354C1401DC /* AppKit.framework in Frameworks */,
+				F1FA58DD09A1A3CEB961BDF2 /* Metal.framework in Frameworks */,
+				49430D4822FF86357BF01E96 /* MetalKit.framework in Frameworks */,
+				7D9DF7731509C7635311E5E2 /* IOKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -129,15 +198,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		01E17705673C1C3E79C85D35 /* Renderer */ = {
-			isa = PBXGroup;
-			children = (
-				67CDBB3DD4350FDBA02E9D79 /* MetalRenderer.swift */,
-				2088AAA754B57C5166B25852 /* Shaders.metal */,
-			);
-			path = Renderer;
-			sourceTree = "<group>";
-		};
 		0FCAEFB116711B8E1C7DFEAE /* USB */ = {
 			isa = PBXGroup;
 			children = (
@@ -160,6 +220,7 @@
 			children = (
 				1486AD463B19B9E1BFD04AA0 /* App */,
 				BB4B9CDAB1198B7EEF6761D0 /* InputRelay */,
+				9E9F7BD2C8A712B58D4E8452 /* Receiver */,
 				D02C08B8BA5EF108BCD651B2 /* ScreenCapture */,
 				C57F0663025E35E3750DF4B4 /* USB */,
 				DDE870357136A6B78FA02493 /* VideoEncoder */,
@@ -184,6 +245,7 @@
 				D7AAC182BD9CFA419B901DE0 /* AppKit.framework */,
 				A38AE63741750230993EA26F /* CoreGraphics.framework */,
 				0D5AD6A0B26DFA057617F36D /* CoreMedia.framework */,
+				E5F97C577A6D9814A5357848 /* IOKit.framework */,
 				7123E40B59B9F4951797F46C /* Metal.framework */,
 				0A79D1C02BAAEC3C46802D39 /* MetalKit.framework */,
 				9717EDD8FA5E05C09BBD7928 /* ScreenCaptureKit.framework */,
@@ -191,6 +253,30 @@
 				18C4ED281632D7ED2C2B18C8 /* VideoToolbox.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		3EBB575B3E199B6510FC257D /* Video */ = {
+			isa = PBXGroup;
+			children = (
+				57D847F8BC4217A8FF10FD80 /* H264Decoder.swift */,
+				B3B361E00B1DA05063943C72 /* MetalRenderer.swift */,
+				ED239919AECACB4881610F27 /* Shaders.metal */,
+			);
+			path = Video;
+			sourceTree = "<group>";
+		};
+		4425C04E87A1DBA2E5F93924 /* Transport */ = {
+			isa = PBXGroup;
+			children = (
+				EA41A95628DEF8AB74096BD3 /* FlowControlState.swift */,
+				1BAA22F80ACAFAF6FD7D1681 /* FrameTransport.swift */,
+				44ECD2A09194625D41148AC1 /* MessageDeframer.swift */,
+				9790C1D89BD41AB5B9504B54 /* NetworkConnection.swift */,
+				435221BEA4A2FD80E6B2C597 /* NetworkHostTransport.swift */,
+				9BC9F139709135924FAA8C5C /* NetworkReceiverTransport.swift */,
+				B72330608F64186E8DE903DA /* ReceiverBrowser.swift */,
+			);
+			path = Transport;
 			sourceTree = "<group>";
 		};
 		4D01340778486042781CF883 /* App */ = {
@@ -218,6 +304,7 @@
 			children = (
 				4C873C53F9E6442C1C7A6D73 /* ExternalScreenIOS.app */,
 				71A9067CEFC96EE46AEFC7BF /* ExternalScreenMac.app */,
+				D17D9F090748F3102F340DD6 /* ExternalScreenTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -225,6 +312,8 @@
 		6697D4EA58CAB12C32DDCB0D /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				4425C04E87A1DBA2E5F93924 /* Transport */,
+				3EBB575B3E199B6510FC257D /* Video */,
 				6D4CFD47B48FA7BB5DBEA8E6 /* Constants.swift */,
 				86CA5CF89C19C2F5FA6C3139 /* Protocol.swift */,
 			);
@@ -246,6 +335,14 @@
 			);
 			name = PeerTalk;
 			path = ExternalScreenMac/Vendor/PeerTalk;
+			sourceTree = "<group>";
+		};
+		9E9F7BD2C8A712B58D4E8452 /* Receiver */ = {
+			isa = PBXGroup;
+			children = (
+				AD641E7AA27954E7AEB954FD /* ReceiverSessionController.swift */,
+			);
+			path = Receiver;
 			sourceTree = "<group>";
 		};
 		A2210D3C5374F7DD4646FBDB /* PeerTalk */ = {
@@ -286,6 +383,7 @@
 		BB4B9CDAB1198B7EEF6761D0 /* InputRelay */ = {
 			isa = PBXGroup;
 			children = (
+				B517B2A8F1245BCE7D2390F8 /* CursorStreamer.swift */,
 				AB2A5D532EA0B7C6C699FB07 /* TouchEventHandler.swift */,
 			);
 			path = InputRelay;
@@ -299,12 +397,14 @@
 			path = USB;
 			sourceTree = "<group>";
 		};
-		C6662ECCA04DC6034C4F5162 /* VideoDecoder */ = {
+		C719EE2DBE4ECB738EB12245 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
-				0C3AD6543F719AE380AC0C96 /* H264Decoder.swift */,
+				2DA380EEC5417C4707A4DE61 /* FlowControlStateTests.swift */,
+				773D480D0C0326CBDFB5B0DD /* MessageDeframerTests.swift */,
+				01701982C703394CF40A11B8 /* ProtocolTests.swift */,
 			);
-			path = VideoDecoder;
+			path = Tests;
 			sourceTree = "<group>";
 		};
 		D02C08B8BA5EF108BCD651B2 /* ScreenCapture */ = {
@@ -333,6 +433,7 @@
 				6697D4EA58CAB12C32DDCB0D /* Shared */,
 				FE0F97D05015F793EDFFD40A /* Sources */,
 				1DA3D07963C6229356E6C0EB /* Sources */,
+				C719EE2DBE4ECB738EB12245 /* Tests */,
 				366235837485787AB3E5552D /* Frameworks */,
 				647A3EB65AED60023B3F34A3 /* Products */,
 			);
@@ -342,10 +443,8 @@
 			isa = PBXGroup;
 			children = (
 				4D01340778486042781CF883 /* App */,
-				01E17705673C1C3E79C85D35 /* Renderer */,
 				B53E0551E040932D45703599 /* Touch */,
 				0FCAEFB116711B8E1C7DFEAE /* USB */,
-				C6662ECCA04DC6034C4F5162 /* VideoDecoder */,
 			);
 			name = Sources;
 			path = ExternalScreenIOS/Sources;
@@ -372,6 +471,24 @@
 			productName = ExternalScreenIOS;
 			productReference = 4C873C53F9E6442C1C7A6D73 /* ExternalScreenIOS.app */;
 			productType = "com.apple.product-type.application";
+		};
+		553931EE821F634B64EE4BF5 /* ExternalScreenTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8565752051B3AEAE67C19A7F /* Build configuration list for PBXNativeTarget "ExternalScreenTests" */;
+			buildPhases = (
+				579FDC334752FE4C8803C337 /* Sources */,
+				82771CC03047313F7DB7B42F /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ExternalScreenTests;
+			packageProductDependencies = (
+			);
+			productName = ExternalScreenTests;
+			productReference = D17D9F090748F3102F340DD6 /* ExternalScreenTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		EB2EFC43CA3C28182A98606F /* ExternalScreenMac */ = {
 			isa = PBXNativeTarget;
@@ -405,6 +522,10 @@
 						DevelopmentTeam = YOUR_TEAM_ID_HERE;
 						ProvisioningStyle = Automatic;
 					};
+					553931EE821F634B64EE4BF5 = {
+						DevelopmentTeam = YOUR_TEAM_ID_HERE;
+						ProvisioningStyle = Automatic;
+					};
 					EB2EFC43CA3C28182A98606F = {
 						DevelopmentTeam = YOUR_TEAM_ID_HERE;
 						ProvisioningStyle = Automatic;
@@ -412,7 +533,6 @@
 				};
 			};
 			buildConfigurationList = 40E0B9AE607994C107963191 /* Build configuration list for PBXProject "ExternalScreen" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -422,11 +542,13 @@
 			mainGroup = E7E21E56418BFD5A2A2C0478;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
+			productRefGroup = 647A3EB65AED60023B3F34A3 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				111A4F31801ACC73E77D0C40 /* ExternalScreenIOS */,
 				EB2EFC43CA3C28182A98606F /* ExternalScreenMac */,
+				111A4F31801ACC73E77D0C40 /* ExternalScreenIOS */,
+				553931EE821F634B64EE4BF5 /* ExternalScreenTests */,
 			);
 		};
 /* End PBXProject section */
@@ -451,6 +573,28 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		579FDC334752FE4C8803C337 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				40DAE7BA05D798933F9BC489 /* Constants.swift in Sources */,
+				6396CF2E6721A592685CC6AC /* FlowControlState.swift in Sources */,
+				C1A4854F134989EBC50B1B96 /* FlowControlStateTests.swift in Sources */,
+				6820E5C7A4CF908E9B01870D /* FrameTransport.swift in Sources */,
+				18CE5D0AF14560E9A5E851FF /* H264Decoder.swift in Sources */,
+				5720D4264793F336DFF8BEDE /* MessageDeframer.swift in Sources */,
+				D20E160A0B3710E4DD197ABA /* MessageDeframerTests.swift in Sources */,
+				481710A91A3B00F05C089DE7 /* MetalRenderer.swift in Sources */,
+				075A9441ECC55494C5C33991 /* NetworkConnection.swift in Sources */,
+				4240177E248F810058B6F255 /* NetworkHostTransport.swift in Sources */,
+				28F18D21D93C31085706ED0D /* NetworkReceiverTransport.swift in Sources */,
+				52EAACD4533D6D63C7A12977 /* Protocol.swift in Sources */,
+				F30238006C90BCAECDCB0F3A /* ProtocolTests.swift in Sources */,
+				3E0752E96C05D7BBED26B3DF /* ReceiverBrowser.swift in Sources */,
+				885D375C4AA6EB609C32E2F4 /* Shaders.metal in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7095EFFA6EF6D4DC33B4F215 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -458,13 +602,25 @@
 				65B4059064C64A5BA09F79D6 /* AppDelegate.swift in Sources */,
 				85255E1A103B00E471DDEE7E /* CGVirtualDisplay+Bridge.m in Sources */,
 				7E4A72798DABDF5FBE6EEBBD /* Constants.swift in Sources */,
+				0FAAC863569B22F85B2317FB /* CursorStreamer.swift in Sources */,
+				2DECAEAC96E5808228FD59C1 /* FlowControlState.swift in Sources */,
+				38234164CC1A3C199628FE87 /* FrameTransport.swift in Sources */,
+				B1732ED83803C2F3B8201148 /* H264Decoder.swift in Sources */,
 				C72BBE3E14CB03199E44A181 /* H264Encoder.swift in Sources */,
 				EF8FB9AF64879C4D7E5643F9 /* MainWindowController.swift in Sources */,
+				A8A4AD186FD772B152594AD6 /* MessageDeframer.swift in Sources */,
+				5542CD5B2ECAA49363788861 /* MetalRenderer.swift in Sources */,
+				B7705958F9B20C11A5B0287E /* NetworkConnection.swift in Sources */,
+				1CC395AE05B649F366A2DAD6 /* NetworkHostTransport.swift in Sources */,
+				5074403F5A05320F394C34E0 /* NetworkReceiverTransport.swift in Sources */,
 				94A110D4D1E806426A98E260 /* PTChannel.m in Sources */,
 				5D2B3D2E7CB9B8A41C790899 /* PTProtocol.m in Sources */,
 				12624D830C96886AF5A0BC4D /* PTUSBHub.m in Sources */,
 				E051D27EF0DB10A10429120B /* Protocol.swift in Sources */,
+				DF99861AA39F36E58D1700ED /* ReceiverBrowser.swift in Sources */,
+				C09B1A8D21F81D116E0F161E /* ReceiverSessionController.swift in Sources */,
 				D7DC270A64BF1E22BCE452BB /* ScreenCaptureManager.swift in Sources */,
+				981AB008D0453FDDD749F4E0 /* Shaders.metal in Sources */,
 				67332D896F333D3C30F78936 /* TouchEventHandler.swift in Sources */,
 				FAA4DBB95CA147A96EFE18A2 /* USBDeviceManager.swift in Sources */,
 				EF42FCC52167FD9368D9E563 /* VirtualDisplayManager.swift in Sources */,
@@ -479,14 +635,21 @@
 				CB304ED54F06D47EAEB90F2B /* ConnectionWaitingView.swift in Sources */,
 				FACB940373545F420E083151 /* Constants.swift in Sources */,
 				AFE483D4B4ECBE4184ADE655 /* DisplayViewController.swift in Sources */,
-				5E6ED740862E16EE52E16A3D /* H264Decoder.swift in Sources */,
-				8BE864585A2F9727E5677DE9 /* MetalRenderer.swift in Sources */,
+				9C336B96264FEF981E4D8C84 /* FlowControlState.swift in Sources */,
+				9F5B396C982A5540EF3ECAF9 /* FrameTransport.swift in Sources */,
+				36AAFDAF657A3D46B808A906 /* H264Decoder.swift in Sources */,
+				99092695B85AA634411C4368 /* MessageDeframer.swift in Sources */,
+				F4BC265DAC8874881EAEB85E /* MetalRenderer.swift in Sources */,
+				F98D6292A1EE2E5E3361ED7A /* NetworkConnection.swift in Sources */,
+				22C36FB85E3E19DA70874350 /* NetworkHostTransport.swift in Sources */,
+				B7F2966AEB24BC7CF4E282E0 /* NetworkReceiverTransport.swift in Sources */,
 				0DC532C97E282094824696B4 /* PTChannel.m in Sources */,
 				99C33D063DFBF28D7B277EA6 /* PTProtocol.m in Sources */,
 				EC7CFB1FFC8F7798AE2E0733 /* PTUSBHub.m in Sources */,
 				6DE052EBC29037C55C15FADD /* Protocol.swift in Sources */,
+				84EF88C84E883E57A30ED8AC /* ReceiverBrowser.swift in Sources */,
 				8F6501FE0885C64210559D7C /* SceneDelegate.swift in Sources */,
-				CFAB7FF2C8E14EACAD0890BE /* Shaders.metal in Sources */,
+				F287B3AA86525F5DF66C9C87 /* Shaders.metal in Sources */,
 				C825A37A4B9D97178787A411 /* TouchCaptureView.swift in Sources */,
 				56BDC834D182B23EACE6F8C6 /* USBConnectionManager.swift in Sources */,
 			);
@@ -495,6 +658,23 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		8FDF35AF7EEAE6B39B351FCB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.externalscreen.tests;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		987946BC44363DF37CE9515C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -590,6 +770,23 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.externalscreen.mac;
 				SDKROOT = macosx;
 				SWIFT_OBJC_BRIDGING_HEADER = "ExternalScreenMac/ExternalScreenMac-Bridging-Header.h";
+			};
+			name = Debug;
+		};
+		9F41F09930D355CBE8C6C18A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.externalscreen.tests;
+				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
@@ -692,6 +889,15 @@
 			buildConfigurations = (
 				99AE389D861592D04C844EAB /* Debug */,
 				E10504D53655F0481713E6C1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8565752051B3AEAE67C19A7F /* Build configuration list for PBXNativeTarget "ExternalScreenTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9F41F09930D355CBE8C6C18A /* Debug */,
+				8FDF35AF7EEAE6B39B351FCB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

@@ -28,5 +28,11 @@
 	<string>NSApplication</string>
 	<key>NSScreenCaptureUsageDescription</key>
 	<string>External Screen needs screen recording permission to capture the virtual display and send it to your iPad.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>External Screen discovers and streams to another Mac over your Thunderbolt or local network connection.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_extscreen._tcp</string>
+	</array>
 </dict>
 </plist>
