@@ -12,7 +12,7 @@ External Screen is a macOS + iOS application that enables using an iPad as an ex
 
 1. **Host mode (iPad receiver)**: Uses USB to stream from a Mac to a connected iPad. The Mac captures screen content, encodes it as H.264, and streams it to the iPad, which decodes and renders via Metal. Touch events flow back from iPad to Mac.
 
-2. **Receiver mode (Mac receiver)**: Accepts screen streams from another Mac over the local network (TCP port 2346 via Bonjour). The receiver Mac decodes and renders the stream in a fullscreen window, with cursor position and image updates sent by the host.
+2. **Receiver mode (Mac receiver)**: Any Mac with "Allow Using as Display" enabled (on by default) listens over the local network (TCP port 2346 via Bonjour) in standby — no window, just the listener. Picking that Mac's name from "Connect to Mac" on another Mac (the host) auto-starts the host pipeline and connects; once the handshake succeeds, the receiver auto-activates into a fullscreen window and decodes/renders the stream, with cursor position and image updates sent by the host. Esc on the receiver, or the host disconnecting, returns it to standby (the listener keeps running). A Mac can't be an active receiver and an active host at the same time.
 
 ## Build Commands
 
@@ -62,7 +62,7 @@ iPad: TouchCaptureView → USB → Mac: TouchEventHandler → CGEvents
 - `InputRelay/TouchEventHandler.swift` - Normalized touch coords → CGEvents (host mode)
 - `InputRelay/CursorStreamer.swift` - Decoupled cursor position/image streaming (host mode)
 - `VirtualDisplay/` - Objective-C bridged virtual display creation (host mode)
-- `Receiver/ReceiverSessionController.swift` - Fullscreen receiver mode; receives frames from remote host, manages decoder and renderer
+- `Receiver/ReceiverSessionController.swift` - Long-lived receiver service with two states: standby (transport listening + Bonjour advertising, no window) and active (fullscreen window, decoder, renderer). Auto-activates on a valid host handshake; auto-returns to standby on host disconnect or Esc, without stopping the listener
 
 **ExternalScreenIOS/Sources/**
 - `App/DisplayViewController.swift` - Full-screen landscape, orchestrates components
@@ -81,6 +81,7 @@ Note: H264Decoder and MetalRenderer have been moved to `Shared/Video/` for cross
 
 - `project.yml` - XcodeGen configuration. Update `YOUR_TEAM_ID_HERE` with actual team ID.
 - Debug logging: `/tmp/ExternalScreen_debug.log`
+- `UserDefaults` key `receiverEnabled` (default: `true`) - backs the "Allow Using as Display" menu checkbox; controls whether receiver standby auto-starts at launch
 
 ## Protocol Details
 
@@ -104,7 +105,7 @@ Touch coordinates are normalized 0.0-1.0 relative to display bounds.
 
 ## Mac-to-Mac Mode
 
-When the Mac app runs in receiver mode, it listens for connections from another Mac (host). The host discovers the receiver via Bonjour and initiates a TCP connection. The receiver decodes and renders incoming H.264 frames fullscreen with cursor overlay. Cursor streaming is decoupled from frame streaming; the host sends cursor updates (position and image) separately from video frames, allowing smooth cursor motion independent of frame rate.
+Every Mac with "Allow Using as Display" enabled runs a `ReceiverSessionController` in standby from launch — listening on TCP port 2346 and advertising via Bonjour, with no window. From the host Mac, choosing that Mac's name under "Connect to Mac" auto-starts the host pipeline and opens a TCP connection; the receiver's own host pipeline running (`isRunning`) causes it to reject the incoming handshake so a Mac is never simultaneously an active host and an active receiver. Once the handshake succeeds, the receiver auto-activates: it builds a fullscreen window, decodes and renders incoming H.264 frames, and overlays the cursor. Cursor streaming is decoupled from frame streaming; the host sends cursor updates (position and image) separately from video frames, allowing smooth cursor motion independent of frame rate. On host disconnect or Esc, the receiver tears down the window/decoder/renderer and returns to standby — the transport listener is never stopped, so it can be reconnected to immediately.
 
 ## Flow Control
 

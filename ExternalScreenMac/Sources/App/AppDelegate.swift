@@ -64,9 +64,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var targetKind: TargetKind = .iPad
     /// Guards against re-entrant `connectToReceiver` calls (e.g. a double-click on the menu item).
     private var isConnectingToReceiver = false
-    /// Guards against re-entrant `enterReceiverMode` calls during the awaited host teardown,
-    /// when `receiverSession` is still nil but `isRunning` has already flipped false.
-    private var isEnteringReceiverMode = false
+
+    /// UserDefaults key controlling whether receiver standby auto-starts (default: on).
+    private static let receiverEnabledKey = "receiverEnabled"
 
     // State
     private var isRunning = false
@@ -108,9 +108,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
 
+        UserDefaults.standard.register(defaults: [Self.receiverEnabledKey: true])
+
         setupStatusBarItem()
         initializeComponents()
         showMainWindow()
+
+        if UserDefaults.standard.bool(forKey: Self.receiverEnabledKey) {
+            startReceiverStandby()
+        }
 
         // Request screen recording permission
         Task {
@@ -173,7 +179,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(receiversMenuItem)
         rebuildReceiversMenu()
 
-        menu.addItem(NSMenuItem(title: "Use This Mac as Receiver", action: #selector(enterReceiverMode), keyEquivalent: "r"))
+        let allowReceiverItem = NSMenuItem(title: "Allow Using as Display", action: #selector(toggleReceiverEnabled(_:)), keyEquivalent: "r")
+        allowReceiverItem.target = self
+        allowReceiverItem.state = UserDefaults.standard.bool(forKey: Self.receiverEnabledKey) ? .on : .off
+        menu.addItem(allowReceiverItem)
 
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Show Window", action: #selector(showMainWindow), keyEquivalent: "w"))
@@ -286,59 +295,49 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc private func enterReceiverMode() {
-        guard receiverSession == nil, !isEnteringReceiverMode else { return }
-        isEnteringReceiverMode = true
-        log("Entering receiver mode")
+    /// "Allow Using as Display" checkbox: flips the persisted pref and starts/stops
+    /// receiver standby to match.
+    @objc private func toggleReceiverEnabled(_ sender: NSMenuItem) {
+        let newValue = sender.state != .on
+        UserDefaults.standard.set(newValue, forKey: Self.receiverEnabledKey)
+        sender.state = newValue ? .on : .off
+        log("toggleReceiverEnabled: \(newValue ? "enabled" : "disabled")")
 
-        // Host and receiver roles are mutually exclusive. If the host pipeline is
-        // running, await its full teardown (including the virtual display, which this
-        // Mac must not keep attached while acting as a screen) before starting the
-        // receiver session, so the two pipelines never briefly co-exist.
-        guard isRunning else {
-            startReceiverSession()
-            return
-        }
-
-        isRunning = false
-        if #available(macOS 14.0, *) {
-            Task {
-                await stopPipelineTeardown(stopVirtualDisplay: true)
-                await MainActor.run {
-                    self.startReceiverSession()
-                }
-            }
+        if newValue {
+            startReceiverStandby()
         } else {
-            h264Encoder.stop()
-            usbDeviceManager.disconnect()
-            receiverBrowser.stop()
-            networkTransport?.disconnect()
-            networkTransport = nil
-            targetKind = .iPad
-            isConnectingToReceiver = false
-            cursorStreamer.stop()
-            virtualDisplayManager.stop()
-            updateStatusIcon(connected: false)
-            updateStatus("Stopped", state: .idle)
-            startReceiverSession()
+            stopReceiverStandby()
         }
     }
 
-    private func startReceiverSession() {
+    /// Starts the long-lived receiver service in standby (listening + advertising, no
+    /// window). It auto-activates into a fullscreen receiver when a host connects, and
+    /// auto-returns to standby on disconnect/Esc — see `ReceiverSessionController`.
+    private func startReceiverStandby() {
+        guard receiverSession == nil else { return }
+        log("Starting receiver standby")
+
         let session = ReceiverSessionController()
+        // Mutual exclusion (host busy -> reject incoming handshake): queried on the main
+        // thread from ReceiverSessionController's handshake handler.
+        session.isHostBusy = { [weak self] in self?.isRunning ?? false }
         session.onExit = { [weak self] in
             self?.receiverSession = nil
-            self?.log("Exited receiver mode")
+            self?.log("Receiver standby stopped")
         }
         do {
             try session.start()
             receiverSession = session
         } catch {
-            log("Failed to start receiver mode: \(error)")
+            log("Failed to start receiver standby: \(error)")
             showAlert(title: "Receiver Mode Failed",
                       message: "Could not listen on port \(ExternalScreenConstants.networkPort): \(error.localizedDescription)")
         }
-        isEnteringReceiverMode = false
+    }
+
+    /// Fully stops the receiver service (including the transport listener).
+    private func stopReceiverStandby() {
+        receiverSession?.stop()
     }
 
     private func reinitializeComponentsWithCurrentPreset() {
@@ -426,11 +425,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         print("ExternalScreen Mac: Components initialized with preset \(currentPreset.rawValue) (\(currentPreset.description))")
 
+        // Started once here (not in startPipeline) so "Connect to Mac" is always populated,
+        // whether or not the host pipeline is running.
         receiverBrowser = ReceiverBrowser()
+        let localName = Host.current().localizedName
         receiverBrowser.onResultsChanged = { [weak self] receivers in
-            self?.discoveredReceivers = receivers
+            // Exclude this Mac's own advertised name: prevents a self-connect entry when
+            // this Mac's receiver standby is also advertising via Bonjour.
+            self?.discoveredReceivers = receivers.filter { $0.name != localName }
             self?.rebuildReceiversMenu()
         }
+        receiverBrowser.start()
     }
 
     private func requestScreenCapturePermission() async {
@@ -498,7 +503,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func startPipeline() {
-        guard receiverSession == nil else {
+        // Block only while the receiver session is actively streaming from another host;
+        // standby (listening, no window) does not prevent this Mac from also hosting.
+        guard receiverSession?.state != .active else {
             log("startPipeline: Ignored - receiver mode active")
             return
         }
@@ -526,7 +533,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 2. Start USB device listener (or reconnect if already listening)
         log("startPipeline: Starting USB listener...")
         usbDeviceManager.startListening()
-        receiverBrowser.start()
 
         // 3. If we had a previous connection, try to reconnect
         if !usbDeviceManager.connected {
@@ -556,13 +562,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Stop capture and encoding, but keep USB listener active for reconnection
         if #available(macOS 14.0, *) {
             Task {
-                await stopPipelineTeardown(stopVirtualDisplay: false)
+                await stopPipelineTeardown()
             }
         } else {
             h264Encoder.stop()
             usbDeviceManager.disconnect()
-            // Tear down any Mac receiver session
-            receiverBrowser.stop()
             networkTransport?.disconnect()
             networkTransport = nil
             targetKind = .iPad
@@ -576,14 +580,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Shared awaited teardown used by `stopPipeline()` and receiver-mode entry: waits
-    /// for screen capture to fully stop, then performs the remaining synchronous
-    /// teardown on the main actor.
-    /// - Parameter stopVirtualDisplay: normal `stopPipeline()` preserves the virtual
-    ///   display (keeps its screen arrangement/position); receiver-mode entry must fully
-    ///   stop it, since this Mac is about to act as a screen rather than a host.
+    /// Awaited teardown used by `stopPipeline()`: waits for screen capture to fully stop,
+    /// then performs the remaining synchronous teardown on the main actor. The receiver
+    /// browser is intentionally left running (started once at launch) so "Connect to Mac"
+    /// stays populated regardless of host pipeline state.
     @available(macOS 14.0, *)
-    private func stopPipelineTeardown(stopVirtualDisplay: Bool) async {
+    private func stopPipelineTeardown() async {
         // Wait for screen capture to fully stop first
         await screenCaptureManager.stopCapture()
 
@@ -592,22 +594,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             h264Encoder.stop()
             // Disconnect USB channel but keep listener active for quick reconnect
             usbDeviceManager.disconnect()
-            // Tear down any Mac receiver session
-            receiverBrowser.stop()
             networkTransport?.disconnect()
             networkTransport = nil
             targetKind = .iPad
             isConnectingToReceiver = false
             cursorStreamer.stop()
-
-            if stopVirtualDisplay {
-                virtualDisplayManager.stop()
-            }
-            // else: keep virtual display active to preserve position settings
+            // Keep virtual display active to preserve position settings
 
             updateStatusIcon(connected: false)
             updateStatus("Stopped", state: .idle)
-            print("ExternalScreen Mac: Pipeline stopped\(stopVirtualDisplay ? "" : " (virtual display preserved)")")
+            print("ExternalScreen Mac: Pipeline stopped (virtual display preserved)")
         }
     }
 

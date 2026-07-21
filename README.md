@@ -14,7 +14,7 @@ External Screen captures your Mac's screen content, encodes it as H.264 video, a
 - **Cursor streaming** - Smooth cursor motion independent of frame rate (Mac-to-Mac mode)
 - **Virtual display** - Creates a dedicated virtual screen (no mirroring your main display)
 - **Multiple resolution presets** - Choose from 4 resolution tiers to balance quality and performance
-- **Bonjour discovery** - Automatic discovery of other Macs running in receiver mode
+- **Bonjour discovery** - Automatic discovery of other Macs available as a display, with one-click connect from the host
 
 ## Requirements
 
@@ -88,11 +88,15 @@ The Mac app requires Screen Recording permission to capture screen content:
 
 ### Mac Receiver (Local Network)
 
-1. Launch **ExternalScreenMac** on the receiver Mac and select "Use This Mac as Receiver" from the menu
-2. Launch **ExternalScreenMac** on the host Mac (sender)
-3. The host Mac automatically discovers available receivers via Bonjour
-4. Select the receiver Mac from the menu to connect
-5. The stream appears fullscreen on the receiver Mac
+Install and launch **ExternalScreenMac** on both Macs and connect them to the same network (or a Thunderbolt/USB-C cable running a network bridge). No manual "receiver mode" step is needed — every Mac listens for incoming connections automatically.
+
+1. On the Mac you want to use as a display, confirm **"Allow Using as Display"** is checked in the menu bar (it's on by default; this just controls whether the Mac is discoverable/connectable as a receiver)
+2. On the other Mac (the host), open **Connect to Mac** in the menu bar — it lists other Macs discovered via Bonjour
+3. Select the receiver Mac's name
+4. The host automatically starts streaming, and the receiver Mac automatically goes fullscreen and starts displaying — no action needed on the receiver side
+5. Press **Esc** on the receiver Mac, or disconnect from the host, to return the receiver to standby (listening, but no window) — its Bonjour listener keeps running so it can be reconnected to at any time
+
+A Mac can't be an active receiver and an active host at the same time: starting the host pipeline is blocked while a Mac is actively displaying another host's stream, and an incoming connection is rejected while a Mac's own host pipeline is running.
 
 ## Architecture
 
@@ -127,7 +131,7 @@ ExternalScreen/
 │   │   ├── USB/               # PeerTalk device management (host mode)
 │   │   ├── InputRelay/        # Touch-to-CGEvent, cursor streaming
 │   │   ├── VirtualDisplay/    # Virtual display (host mode)
-│   │   └── Receiver/          # ReceiverSessionController (receiver mode)
+│   │   └── Receiver/          # ReceiverSessionController (standby + fullscreen receiver states)
 │   └── Vendor/PeerTalk/       # USB communication library
 ├── ExternalScreenIOS/        # iPadOS app
 │   ├── Sources/
