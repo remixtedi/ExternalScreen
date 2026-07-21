@@ -606,6 +606,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         networkTransport = nil
                         targetKind = .iPad
                         reinitializeComponentsWithCurrentPreset()
+                        if !virtualDisplayManager.isActive {
+                            virtualDisplayManager.start()
+                        }
                         return
                     }
 
@@ -838,6 +841,9 @@ extension AppDelegate: FrameTransportDelegate {
                         // A Mac-receiver session left Mac-native-sized components behind;
                         // rebuild at the current iPad preset so the next iPad connect isn't mismatched.
                         reinitializeComponentsWithCurrentPreset()
+                        if !virtualDisplayManager.isActive {
+                            virtualDisplayManager.start()
+                        }
                     }
                     if isRunning {
                         updateStatus("Waiting for connection...", state: .waiting)
