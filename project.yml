@@ -50,6 +50,9 @@ targets:
       - sdk: CoreMedia.framework
       - sdk: CoreGraphics.framework
       - sdk: AppKit.framework
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: IOKit.framework
 
   ExternalScreenIOS:
     type: application
@@ -99,6 +102,11 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.externalscreen.tests
         CODE_SIGN_STYLE: Automatic
+    dependencies:
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: VideoToolbox.framework
+      - sdk: CoreMedia.framework
 
 schemes:
   ExternalScreenMac:
