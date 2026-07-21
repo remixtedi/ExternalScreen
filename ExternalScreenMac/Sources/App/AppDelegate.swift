@@ -734,7 +734,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         width: w, height: h,
                         frameRate: Int(ExternalScreenConstants.defaultRefreshRate),
                         bitrate: bitrate,
-                        keyframeInterval: ExternalScreenConstants.keyframeInterval
+                        keyframeInterval: ExternalScreenConstants.networkKeyframeInterval
                     )
                     h264Encoder.delegate = self
 

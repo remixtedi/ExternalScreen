@@ -59,6 +59,13 @@ public enum ExternalScreenConstants {
     /// At 60fps, every 15 frames = every 0.25 sec for quick error recovery
     public static let keyframeInterval: Int = 15  // Every 15 frames at 60fps = every 0.25 sec
 
+    /// Keyframe interval for Mac-receiver (network) sessions: 1/sec at 60fps. The
+    /// Thunderbolt Bridge link is far more reliable than USB and the wider network
+    /// flow-control window (see `networkMaxInFlightFrames`) makes P-frame drops rarer,
+    /// so recovery doesn't need to be as fast — this cuts idle bandwidth ~4x vs. the
+    /// iPad/USB interval.
+    public static let networkKeyframeInterval: Int = 60
+
     /// Protocol version for compatibility checking
     public static let protocolVersion: UInt32 = 2
 
@@ -77,4 +84,9 @@ public enum ExternalScreenConstants {
     /// Maximum frames in-flight before dropping new P-frames
     /// Value of 4 balances latency with USB round-trip time (~15ms at 120fps)
     public static let maxInFlightFrames: UInt32 = 4
+
+    /// Maximum frames in-flight for Mac-to-Mac (Thunderbolt Bridge) sessions. Thunderbolt
+    /// RTT is far lower than USB, so a wider window gives more headroom before P-frames
+    /// are dropped, without materially adding latency.
+    public static let networkMaxInFlightFrames: UInt32 = 8
 }

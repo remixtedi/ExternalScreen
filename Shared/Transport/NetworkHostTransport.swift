@@ -73,7 +73,7 @@ public final class NetworkHostTransport: FrameTransport {
     }
 
     public func canSendFrame() -> Bool {
-        flowControl.canSend(maxInFlight: ExternalScreenConstants.maxInFlightFrames)
+        flowControl.canSend(maxInFlight: ExternalScreenConstants.networkMaxInFlightFrames)
     }
 
     public func incrementDroppedFrames() { flowControl.recordDropped() }

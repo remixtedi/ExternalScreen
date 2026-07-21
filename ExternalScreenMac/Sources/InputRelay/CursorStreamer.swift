@@ -7,11 +7,21 @@ final class CursorStreamer {
 
     private weak var transport: FrameTransport?
     private var displayID: CGDirectDisplayID = 0
-    private var monitors: [Any] = []
-    private var imageTimer: Timer?
+    private var receiverScale: CGFloat = 2.0
+
+    // NSEvent global/local monitors and a run-loop Timer both stall while the host's main
+    // thread is in tracking-event mode (window drags, menu tracking) -- exactly when the
+    // user is moving the mouse the most. Poll from a dedicated background queue instead so
+    // cursor updates keep flowing regardless of what the main run loop is doing.
+    private let pollQueue = DispatchQueue(label: "com.externalscreen.cursor.poll", qos: .userInteractive)
+    private var positionTimer: DispatchSourceTimer?
+    private var imageTimer: DispatchSourceTimer?
+
     private var lastImagePNG: Data?
     private var wasOnDisplay = false
-    private var receiverScale: CGFloat = 2.0
+    /// Touched only on `pollQueue` (single-writer/reader from the position timer's
+    /// handler) -- no locking needed.
+    private var lastLocation: CGPoint?
 
     func start(displayID: CGDirectDisplayID, transport: FrameTransport, receiverScale: CGFloat) {
         stop()
@@ -19,55 +29,51 @@ final class CursorStreamer {
         self.transport = transport
         self.receiverScale = (receiverScale.isFinite && receiverScale > 0) ? receiverScale : 2.0
 
-        let events: NSEvent.EventTypeMask = [
-            .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged
-        ]
-        // Global monitor covers other apps; local covers our own app being frontmost.
-        if let global = NSEvent.addGlobalMonitorForEvents(matching: events, handler: { [weak self] event in
-            self?.handleMouseEvent(event)
-        }) {
-            monitors.append(global)
+        // Position: 120 Hz poll of the (thread-safe) CGEvent cursor location.
+        let positionTimer = DispatchSource.makeTimerSource(queue: pollQueue)
+        positionTimer.schedule(deadline: .now(), repeating: .milliseconds(8))
+        positionTimer.setEventHandler { [weak self] in
+            self?.pollPosition()
         }
-        let local = NSEvent.addLocalMonitorForEvents(matching: events) { [weak self] event in
-            self?.handleMouseEvent(event)
-            return event
-        }
-        if let local = local {
-            monitors.append(local)
-        }
+        positionTimer.resume()
+        self.positionTimer = positionTimer
 
-        // Cursor image changes are polled at 4 Hz (image is only sent when it changes).
-        imageTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
-            self?.sendCursorImageIfChanged()
+        // Image: 4 Hz poll (image is only sent when it changes). NSCursor/NSImage are
+        // AppKit calls that are main-thread-preferred, so hop to main for the actual work;
+        // the image freezing during a drag is acceptable since the cursor shape rarely
+        // changes mid-drag.
+        let imageTimer = DispatchSource.makeTimerSource(queue: pollQueue)
+        imageTimer.schedule(deadline: .now(), repeating: .milliseconds(250))
+        imageTimer.setEventHandler { [weak self] in
+            DispatchQueue.main.async {
+                self?.sendCursorImageIfChanged()
+            }
         }
-        sendCursorImageIfChanged()
-        // Push an initial position so the receiver shows the cursor immediately if it's already there
-        sendCurrentPosition()
+        imageTimer.resume()
+        self.imageTimer = imageTimer
 
         print("CursorStreamer: started for display \(displayID)")
     }
 
     func stop() {
-        for monitor in monitors {
-            NSEvent.removeMonitor(monitor)
-        }
-        monitors.removeAll()
-        imageTimer?.invalidate()
+        positionTimer?.cancel()
+        positionTimer = nil
+        imageTimer?.cancel()
         imageTimer = nil
         lastImagePNG = nil
         wasOnDisplay = false
+        lastLocation = nil
     }
 
     // MARK: - Position
 
-    private func handleMouseEvent(_ event: NSEvent) {
-        // CGEvent location is in global top-left-origin coordinates, matching CGDisplayBounds.
-        guard let location = event.cgEvent?.location else { return }
-        send(location: location)
-    }
-
-    private func sendCurrentPosition() {
+    /// Runs on `pollQueue` at 120 Hz.
+    private func pollPosition() {
+        // CGEvent location is in global top-left-origin coordinates, matching
+        // CGDisplayBounds, and (unlike NSEvent) is a thread-safe CG call.
         guard let location = CGEvent(source: nil)?.location else { return }
+        guard location != lastLocation else { return }
+        lastLocation = location
         send(location: location)
     }
 
@@ -92,6 +98,7 @@ final class CursorStreamer {
 
     // MARK: - Image
 
+    /// Runs on the main queue (hopped to from the `pollQueue` image timer).
     private func sendCursorImageIfChanged() {
         guard let transport = transport else { return }
         let cursor = NSCursor.currentSystem ?? NSCursor.current
