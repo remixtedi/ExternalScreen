@@ -697,12 +697,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
                     let w = Int(caps.pixelWidth)
                     let h = Int(caps.pixelHeight)
+                    let scale = CGFloat(caps.scale)
 
+                    // The virtual display's CGVirtualDisplayMode is created at the
+                    // receiver's LOGICAL (point) size with hiDPI backing -- see
+                    // VirtualDisplayManager.reconfigureForReceiver. Capture/encode below
+                    // continue to use the receiver's PIXEL dims (w, h) unchanged, since
+                    // ScreenCaptureKit captures a HiDPI display's Retina backing at 1:1,
+                    // and the receiver renders the stream at its native pixel resolution.
                     let ok = virtualDisplayManager.reconfigureForReceiver(
-                        pixelWidth: w, pixelHeight: h,
+                        pixelWidth: w, pixelHeight: h, scale: scale,
                         refreshRate: ExternalScreenConstants.defaultRefreshRate
                     )
-                    log("reconfigureForReceiver(\(w)x\(h)) -> \(ok), displayID=\(virtualDisplayManager.displayID)")
+                    log("reconfigureForReceiver(\(w)x\(h) @\(caps.scale)x) -> \(ok), displayID=\(virtualDisplayManager.displayID)")
                     guard ok else {
                         updateStatus("Failed to create display", state: .idle)
                         networkTransport?.disconnect()
@@ -718,6 +725,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         }
                         return
                     }
+
+                    // Confirm points-vs-pixels behavior: CGDisplayBounds reports the
+                    // display's logical (point) size, which should be roughly pixel dims /
+                    // scale -- not equal to the receiver's raw pixel dims.
+                    let boundsAfterReconfigure = CGDisplayBounds(virtualDisplayManager.displayID)
+                    log("Display bounds after reconfigure: \(Int(boundsAfterReconfigure.width))x\(Int(boundsAfterReconfigure.height)) points vs receiver pixel dims \(w)x\(h) (@\(caps.scale)x)")
 
                     // Bitrate: ~10 bits/pixel/sec, capped at 80 Mbps, floor 25 Mbps
                     let bitrate = min(80_000_000, max(25_000_000, w * h * 10))

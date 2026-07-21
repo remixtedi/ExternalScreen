@@ -29,12 +29,20 @@ final class VirtualDisplayManager {
 
     // MARK: - Configuration
 
+    /// Mode dimensions handed to CGVirtualDisplayMode. These are always POINT/logical
+    /// dimensions, not pixel dimensions -- CGVirtualDisplayMode's width/height are the
+    /// logical size of the display, and `hiDPI` supplies the 2x Retina pixel backing on
+    /// top of them. The iPad path stores preset (logical) dims here already; the Mac
+    /// receiver path (`reconfigureForReceiver`) stores the receiver's point dims computed
+    /// from its reported pixel dims / scale, for the same reason. Capture and encoding use
+    /// the receiver's actual PIXEL dimensions, tracked separately by AppDelegate -- ScreenCaptureKit
+    /// captures a HiDPI display's Retina backing store at 1:1, i.e. at pixel resolution.
     private(set) var width: Int
     private(set) var height: Int
     private(set) var refreshRate: Double
     private let ppi: Int
     private var displayName: String
-    private let hiDPI: Bool
+    private var hiDPI: Bool
     private var serialNum: UInt32 = 0xE0190D01
 
     // MARK: - Initialization
@@ -112,26 +120,50 @@ final class VirtualDisplayManager {
         delegate?.virtualDisplayDidDisconnect()
     }
 
-    /// Destroys and recreates the virtual display at a Mac receiver's native
-    /// pixel resolution with HiDPI scaling. Returns true on success.
+    /// Destroys and recreates the virtual display for a Mac receiver, sized so the
+    /// receiver's *pixel* backing (its native panel resolution) maps 1:1 through
+    /// ScreenCaptureKit.
+    ///
+    /// CGVirtualDisplayMode dimensions are POINT/logical dimensions -- exactly like the
+    /// iPad path's preset dims -- with `hiDPI` giving the 2x Retina pixel backing on top.
+    /// Passing the receiver's raw pixel size as the mode would render the UI at that many
+    /// *points*, i.e. shrunk to a fraction of its intended size on a HiDPI receiver. So we
+    /// divide by `scale` here to recover the logical point size and hand that to
+    /// CGVirtualDisplayMode instead.
+    ///
+    /// - Parameters:
+    ///   - pixelWidth: Receiver's native pixel width (its panel resolution).
+    ///   - pixelHeight: Receiver's native pixel height.
+    ///   - scale: Receiver's backing scale factor (2.0 for Retina). Values <= 0 are treated
+    ///     as 1 (non-Retina, mode dims == pixel dims).
+    ///   - rate: Refresh rate in Hz.
+    /// - Returns: true on success.
     @discardableResult
-    func reconfigureForReceiver(pixelWidth: Int, pixelHeight: Int, refreshRate rate: Double) -> Bool {
+    func reconfigureForReceiver(pixelWidth: Int, pixelHeight: Int, scale: CGFloat, refreshRate rate: Double) -> Bool {
         // Save the prior configuration so we can roll back if the new one fails to apply.
         let previousWidth = width
         let previousHeight = height
         let previousRefreshRate = refreshRate
         let previousDisplayName = displayName
         let previousSerialNum = serialNum
+        let previousHiDPI = hiDPI
 
         if isRunning {
             bridge.destroyDisplay()
             isRunning = false
         }
 
-        width = pixelWidth
-        height = pixelHeight
+        // Clamp non-positive/sub-1 scale to 1 -- CGVirtualDisplayMode dims should never
+        // exceed the receiver's own pixel dims.
+        let effectiveScale = max(scale, 1)
+        let pointWidth = Int((Double(pixelWidth) / Double(effectiveScale)).rounded())
+        let pointHeight = Int((Double(pixelHeight) / Double(effectiveScale)).rounded())
+
+        width = pointWidth
+        height = pointHeight
         refreshRate = rate
         displayName = "Mac External Display"
+        hiDPI = effectiveScale > 1
         serialNum = 0xE0190D02  // distinct identity so macOS remembers arrangement separately from iPad
 
         if start() {
@@ -144,6 +176,7 @@ final class VirtualDisplayManager {
         refreshRate = previousRefreshRate
         displayName = previousDisplayName
         serialNum = previousSerialNum
+        hiDPI = previousHiDPI
         start()  // best-effort restore; caller still treats this reconfigure as failed
 
         return false
