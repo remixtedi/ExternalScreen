@@ -67,9 +67,9 @@ iPad: TouchCaptureView → USB → Mac: TouchEventHandler → CGEvents
 **ExternalScreenIOS/Sources/**
 - `App/DisplayViewController.swift` - Full-screen landscape, orchestrates components
 - `USB/USBConnectionManager.swift` - PeerTalk server listening on port 2345
-- `VideoDecoder/H264Decoder.swift` - VideoToolbox H.264 decoding, SPS/PPS handling
-- `Renderer/MetalRenderer.swift` - Metal texture from CVPixelBuffer, full-screen quad
 - `Touch/TouchCaptureView.swift` - Touch capture, normalized coordinates (0.0-1.0)
+
+Note: H264Decoder and MetalRenderer have been moved to `Shared/Video/` for cross-platform use.
 
 ### Dependencies
 
