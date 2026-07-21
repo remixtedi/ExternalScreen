@@ -22,6 +22,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var h264Encoder: H264Encoder!
     private var usbDeviceManager: USBDeviceManager!
     private var touchEventHandler: TouchEventHandler!
+    private var cursorStreamer = CursorStreamer()
 
     // Mac-to-Mac networking
     private var networkTransport: NetworkHostTransport?
@@ -291,6 +292,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             networkTransport = nil
             targetKind = .iPad
             isConnectingToReceiver = false
+            cursorStreamer.stop()
             virtualDisplayManager.stop()
             updateStatusIcon(connected: false)
             updateStatus("Stopped", state: .idle)
@@ -537,6 +539,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             networkTransport = nil
             targetKind = .iPad
             isConnectingToReceiver = false
+            cursorStreamer.stop()
             // Keep virtual display active to preserve position settings
 
             updateStatusIcon(connected: false)
@@ -567,6 +570,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             networkTransport = nil
             targetKind = .iPad
             isConnectingToReceiver = false
+            cursorStreamer.stop()
 
             if stopVirtualDisplay {
                 virtualDisplayManager.stop()
@@ -724,6 +728,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                                 return
                             }
                             self.startCaptureAndEncoding()
+                            self.cursorStreamer.start(
+                                displayID: self.virtualDisplayManager.displayID,
+                                transport: transport
+                            )
                         }
                     }
                 }
@@ -901,6 +909,7 @@ extension AppDelegate: FrameTransportDelegate {
             networkTransport = nil
             targetKind = .iPad
             isConnectingToReceiver = false
+            cursorStreamer.stop()
         }
 
         updateStatusIcon(connected: false)

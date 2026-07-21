@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		075A9441ECC55494C5C33991 /* NetworkConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9790C1D89BD41AB5B9504B54 /* NetworkConnection.swift */; };
 		0DC532C97E282094824696B4 /* PTChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 93B37B4D2845F28D4DDFC3EC /* PTChannel.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		0FAAC863569B22F85B2317FB /* CursorStreamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B517B2A8F1245BCE7D2390F8 /* CursorStreamer.swift */; };
 		12624D830C96886AF5A0BC4D /* PTUSBHub.m in Sources */ = {isa = PBXBuildFile; fileRef = 2446CA09896F968882B6F288 /* PTUSBHub.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		18CE5D0AF14560E9A5E851FF /* H264Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D847F8BC4217A8FF10FD80 /* H264Decoder.swift */; };
 		1B8DDB96BEDFCDC1631264BB /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7123E40B59B9F4951797F46C /* Metal.framework */; };
@@ -136,6 +137,7 @@
 		AD641E7AA27954E7AEB954FD /* ReceiverSessionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverSessionController.swift; sourceTree = "<group>"; };
 		B0681FE3BFB2571EE3FFD5DE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		B3B361E00B1DA05063943C72 /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
+		B517B2A8F1245BCE7D2390F8 /* CursorStreamer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorStreamer.swift; sourceTree = "<group>"; };
 		B72330608F64186E8DE903DA /* ReceiverBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverBrowser.swift; sourceTree = "<group>"; };
 		C29FC3E8CA0B51711DE0DA38 /* USBConnectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = USBConnectionManager.swift; sourceTree = "<group>"; };
 		C601BC53C141D3ADF6B75DAD /* VirtualDisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualDisplayManager.swift; sourceTree = "<group>"; };
@@ -381,6 +383,7 @@
 		BB4B9CDAB1198B7EEF6761D0 /* InputRelay */ = {
 			isa = PBXGroup;
 			children = (
+				B517B2A8F1245BCE7D2390F8 /* CursorStreamer.swift */,
 				AB2A5D532EA0B7C6C699FB07 /* TouchEventHandler.swift */,
 			);
 			path = InputRelay;
@@ -599,6 +602,7 @@
 				65B4059064C64A5BA09F79D6 /* AppDelegate.swift in Sources */,
 				85255E1A103B00E471DDEE7E /* CGVirtualDisplay+Bridge.m in Sources */,
 				7E4A72798DABDF5FBE6EEBBD /* Constants.swift in Sources */,
+				0FAAC863569B22F85B2317FB /* CursorStreamer.swift in Sources */,
 				2DECAEAC96E5808228FD59C1 /* FlowControlState.swift in Sources */,
 				38234164CC1A3C199628FE87 /* FrameTransport.swift in Sources */,
 				B1732ED83803C2F3B8201148 /* H264Decoder.swift in Sources */,
