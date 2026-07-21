@@ -23,7 +23,10 @@ public final class NetworkHostTransport: FrameTransport {
     public func start() {
         let nwConnection = NWConnection(to: endpoint, using: NetworkConnection.makeParameters())
         let conn = NetworkConnection(connection: nwConnection)
+
+        lock.lock()
         networkConnection = conn
+        lock.unlock()
 
         conn.onMessage = { [weak self] message in
             self?.handleMessage(message)
@@ -50,7 +53,11 @@ public final class NetworkHostTransport: FrameTransport {
         )
         var message = header.toData()
         message.append(payload)
-        networkConnection?.send(message)
+
+        lock.lock()
+        let conn = networkConnection
+        lock.unlock()
+        conn?.send(message)
     }
 
     public func sendFrame(frameData: Data, frameNumber: UInt32, isKeyframe: Bool, presentationTime: UInt64) {
@@ -74,11 +81,12 @@ public final class NetworkHostTransport: FrameTransport {
     public func resetFlowControl() { flowControl.reset() }
 
     public func disconnect() {
-        networkConnection?.cancel()
-        networkConnection = nil
         lock.lock()
+        let conn = networkConnection
+        networkConnection = nil
         connected = false
         lock.unlock()
+        conn?.cancel()
     }
 
     private func handleMessage(_ message: Data) {
@@ -112,8 +120,8 @@ public final class NetworkHostTransport: FrameTransport {
             lock.lock()
             let wasConnected = connected
             connected = false
-            lock.unlock()
             networkConnection = nil
+            lock.unlock()
             if wasConnected {
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }

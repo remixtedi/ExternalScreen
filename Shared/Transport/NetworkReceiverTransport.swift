@@ -60,7 +60,11 @@ public final class NetworkReceiverTransport: FrameTransport {
         )
         var message = header.toData()
         message.append(payload)
-        networkConnection?.send(message)
+
+        lock.lock()
+        let conn = networkConnection
+        lock.unlock()
+        conn?.send(message)
     }
 
     public func sendFrame(frameData: Data, frameNumber: UInt32, isKeyframe: Bool, presentationTime: UInt64) {
@@ -74,19 +78,23 @@ public final class NetworkReceiverTransport: FrameTransport {
     public func resetFlowControl() { flowControl.reset() }
 
     public func disconnect() {
-        networkConnection?.cancel()
-        networkConnection = nil
         lock.lock()
+        let conn = networkConnection
+        networkConnection = nil
         connected = false
         lock.unlock()
+        conn?.cancel()
     }
 
     private func accept(_ nwConnection: NWConnection) {
-        // Replace any existing connection (matches iPad-side behavior)
-        networkConnection?.cancel()
-
         let conn = NetworkConnection(connection: nwConnection)
+
+        // Replace any existing connection (matches iPad-side behavior)
+        lock.lock()
+        let previous = networkConnection
         networkConnection = conn
+        lock.unlock()
+        previous?.cancel()
 
         conn.onMessage = { [weak self] message in
             guard let self = self else { return }
@@ -108,8 +116,8 @@ public final class NetworkReceiverTransport: FrameTransport {
                 self.lock.lock()
                 let wasConnected = self.connected
                 self.connected = false
-                self.lock.unlock()
                 self.networkConnection = nil
+                self.lock.unlock()
                 if wasConnected {
                     DispatchQueue.main.async {
                         self.transportDelegate?.transportDidDisconnect(self)
