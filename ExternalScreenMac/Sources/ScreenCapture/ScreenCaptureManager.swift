@@ -26,6 +26,7 @@ final class ScreenCaptureManager: NSObject {
     private let width: Int
     private let height: Int
     private let frameRate: Int
+    private let showsCursor: Bool
 
     // MARK: - Initialization
 
@@ -34,13 +35,15 @@ final class ScreenCaptureManager: NSObject {
         self.width = preset.width
         self.height = preset.height
         self.frameRate = frameRate
+        self.showsCursor = true
         super.init()
     }
 
-    init(width: Int, height: Int, frameRate: Int) {
+    init(width: Int, height: Int, frameRate: Int, showsCursor: Bool = true) {
         self.width = width
         self.height = height
         self.frameRate = frameRate
+        self.showsCursor = showsCursor
         super.init()
     }
 
@@ -77,7 +80,7 @@ final class ScreenCaptureManager: NSObject {
         configuration.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(frameRate))
         configuration.queueDepth = ExternalScreenConstants.captureQueueDepth
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
-        configuration.showsCursor = true
+        configuration.showsCursor = showsCursor
         configuration.capturesAudio = false
 
         // High quality scaling settings for sharp text
@@ -128,7 +131,7 @@ final class ScreenCaptureManager: NSObject {
         configuration.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(frameRate))
         configuration.queueDepth = ExternalScreenConstants.captureQueueDepth
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
-        configuration.showsCursor = true
+        configuration.showsCursor = showsCursor
 
         try await stream.updateConfiguration(configuration)
     }

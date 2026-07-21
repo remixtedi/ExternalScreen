@@ -70,7 +70,8 @@
                            ppi:(NSUInteger)ppi
                    refreshRate:(double)refreshRate
                           name:(NSString *)name
-                         hiDPI:(BOOL)hiDPI {
+                         hiDPI:(BOOL)hiDPI
+                     serialNum:(UInt32)serialNum {
 
     if (_isActive) {
         NSLog(@"VirtualDisplayBridge: Display already active, destroying first");
@@ -94,9 +95,10 @@
     CGFloat heightMM = (CGFloat)height / (CGFloat)ppi * 25.4;
 
     // Create descriptor
-    // Use max possible resolution (Native iPad: 2388x1668) so resolution changes always work
-    NSUInteger maxWidth = width > 2388 ? width : 2388;
-    NSUInteger maxHeight = height > 1668 ? height : 1668;
+    // Max possible resolution: cover both iPad native (2388x1668) and
+    // large Retina Mac panels (up to 6K) so mode updates always fit.
+    NSUInteger maxWidth = width > 6016 ? width : 6016;
+    NSUInteger maxHeight = height > 3384 ? height : 3384;
     CGVirtualDisplayDescriptor *descriptor = [[NSClassFromString(@"CGVirtualDisplayDescriptor") alloc] init];
     descriptor.name = name;
     descriptor.maxPixelsWide = maxWidth;
@@ -106,7 +108,7 @@
     descriptor.vendorID = 0x5678;
     // Use a fixed serial number so macOS remembers display position
     // This allows the display arrangement to persist across restarts
-    descriptor.serialNum = 0xE0190D01;
+    descriptor.serialNum = serialNum;
     descriptor.queue = dispatch_get_main_queue();
 
     __weak typeof(self) weakSelf = self;

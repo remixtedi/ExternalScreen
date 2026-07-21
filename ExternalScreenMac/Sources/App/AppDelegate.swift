@@ -23,6 +23,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var usbDeviceManager: USBDeviceManager!
     private var touchEventHandler: TouchEventHandler!
 
+    // Mac-to-Mac networking
+    private var networkTransport: NetworkHostTransport?
+    private var receiverBrowser: ReceiverBrowser!
+    private var discoveredReceivers: [DiscoveredReceiver] = []
+    private var receiversMenu: NSMenu!
+
+    /// The transport currently carrying the stream (PeerTalk for iPad by default).
+    private var activeTransport: FrameTransport {
+        networkTransport ?? usbDeviceManager
+    }
+
+    private enum TargetKind { case iPad, macReceiver }
+    private var targetKind: TargetKind = .iPad
+
     // State
     private var isRunning = false
     private var frameNumber: UInt32 = 0
@@ -121,6 +135,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         presetMenuItem.submenu = presetMenu
         menu.addItem(presetMenuItem)
 
+        receiversMenu = NSMenu()
+        let receiversMenuItem = NSMenuItem(title: "Connect to Mac", action: nil, keyEquivalent: "")
+        receiversMenuItem.submenu = receiversMenu
+        menu.addItem(receiversMenuItem)
+        rebuildReceiversMenu()
+
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Show Window", action: #selector(showMainWindow), keyEquivalent: "w"))
         menu.addItem(NSMenuItem.separator())
@@ -130,6 +150,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func selectPreset(_ sender: NSMenuItem) {
+        guard targetKind == .iPad else {
+            log("Preset change ignored: Mac receiver uses native resolution")
+            return
+        }
+
         let allPresets = DisplayPreset.allCases
         guard sender.tag >= 0 && sender.tag < allPresets.count else {
             log("selectPreset: Invalid tag \(sender.tag)")
@@ -157,6 +182,43 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             log("selectPreset: Reinitializing components with new preset...")
             reinitializeComponentsWithCurrentPreset()
         }
+    }
+
+    // MARK: - Receiver Discovery
+
+    private func rebuildReceiversMenu() {
+        receiversMenu.removeAllItems()
+        if discoveredReceivers.isEmpty {
+            let empty = NSMenuItem(title: "No Macs found", action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            receiversMenu.addItem(empty)
+            return
+        }
+        for (index, receiver) in discoveredReceivers.enumerated() {
+            let item = NSMenuItem(title: receiver.name, action: #selector(connectToReceiver(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = index
+            receiversMenu.addItem(item)
+        }
+    }
+
+    @objc private func connectToReceiver(_ sender: NSMenuItem) {
+        guard sender.tag >= 0 && sender.tag < discoveredReceivers.count else { return }
+        let receiver = discoveredReceivers[sender.tag]
+        log("Connecting to Mac receiver: \(receiver.name)")
+
+        // Tear down any current session
+        networkTransport?.disconnect()
+
+        targetKind = .macReceiver
+        let transport = NetworkHostTransport(endpoint: receiver.endpoint, name: receiver.name)
+        transport.transportDelegate = self
+        networkTransport = transport
+
+        if !isRunning {
+            startPipeline()
+        }
+        transport.start()
     }
 
     private func reinitializeComponentsWithCurrentPreset() {
@@ -200,17 +262,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 // Reset frame counter for clean restart
                 frameNumber = 0
                 didDropFrames = false
-                usbDeviceManager.resetFlowControl()
+                activeTransport.resetFlowControl()
 
                 // Restart if iPad is connected
-                if usbDeviceManager.connected {
+                if activeTransport.isConnected {
                     // Send updated display config with effective dimensions
                     let config = DisplayConfigMessage(
                         width: UInt32(w),
                         height: UInt32(h),
                         refreshRate: Float(ExternalScreenConstants.defaultRefreshRate)
                     )
-                    usbDeviceManager.sendMessage(type: .displayConfig, payload: config.toData())
+                    activeTransport.sendMessage(type: .displayConfig, payload: config.toData())
 
                     // Wait for ScreenCaptureKit to detect the updated display
                     try? await Task.sleep(nanoseconds: 500_000_000)
@@ -243,6 +305,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         touchEventHandler = TouchEventHandler()
 
         print("ExternalScreen Mac: Components initialized with preset \(currentPreset.rawValue) (\(currentPreset.description))")
+
+        receiverBrowser = ReceiverBrowser()
+        receiverBrowser.onResultsChanged = { [weak self] receivers in
+            self?.discoveredReceivers = receivers
+            self?.rebuildReceiversMenu()
+        }
     }
 
     private func requestScreenCapturePermission() async {
@@ -281,6 +349,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Called by MainWindow when resolution picker changes
     func setPreset(_ preset: DisplayPreset) {
+        guard targetKind == .iPad else {
+            log("Preset change ignored: Mac receiver uses native resolution")
+            return
+        }
         guard preset != currentPreset else { return }
 
         log("setPreset: Setting preset to \(preset.rawValue) (\(preset.description))")
@@ -330,6 +402,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 2. Start USB device listener (or reconnect if already listening)
         log("startPipeline: Starting USB listener...")
         usbDeviceManager.startListening()
+        receiverBrowser.start()
 
         // 3. If we had a previous connection, try to reconnect
         if !usbDeviceManager.connected {
@@ -367,6 +440,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     h264Encoder.stop()
                     // Disconnect USB channel but keep listener active for quick reconnect
                     usbDeviceManager.disconnect()
+                    // Tear down any Mac receiver session
+                    receiverBrowser.stop()
+                    networkTransport?.disconnect()
+                    networkTransport = nil
+                    targetKind = .iPad
                     // Keep virtual display active to preserve position settings
                     // virtualDisplayManager.stop() - commented out to preserve position
 
@@ -378,6 +456,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             h264Encoder.stop()
             usbDeviceManager.disconnect()
+            // Tear down any Mac receiver session
+            receiverBrowser.stop()
+            networkTransport?.disconnect()
+            networkTransport = nil
+            targetKind = .iPad
             // Keep virtual display active to preserve position settings
 
             updateStatusIcon(connected: false)
@@ -452,6 +535,66 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         log("startCaptureAndEncoding: Complete")
+    }
+
+    private func handleDisplayCapabilities(_ caps: DisplayCapabilitiesMessage) {
+        log("Receiver capabilities: \(caps.pixelWidth)x\(caps.pixelHeight) @\(caps.scale)x")
+
+        if #available(macOS 14.0, *) {
+            Task {
+                await screenCaptureManager.stopCapture()
+                await MainActor.run {
+                    h264Encoder.stop()
+
+                    let w = Int(caps.pixelWidth)
+                    let h = Int(caps.pixelHeight)
+
+                    let ok = virtualDisplayManager.reconfigureForReceiver(
+                        pixelWidth: w, pixelHeight: h,
+                        refreshRate: ExternalScreenConstants.defaultRefreshRate
+                    )
+                    log("reconfigureForReceiver(\(w)x\(h)) -> \(ok), displayID=\(virtualDisplayManager.displayID)")
+                    guard ok else {
+                        updateStatus("Failed to create display", state: .idle)
+                        return
+                    }
+
+                    // Bitrate: ~10 bits/pixel/sec, capped at 80 Mbps, floor 25 Mbps
+                    let bitrate = min(80_000_000, max(25_000_000, w * h * 10))
+                    h264Encoder = H264Encoder(
+                        width: w, height: h,
+                        frameRate: Int(ExternalScreenConstants.defaultRefreshRate),
+                        bitrate: bitrate,
+                        keyframeInterval: ExternalScreenConstants.keyframeInterval
+                    )
+                    h264Encoder.delegate = self
+
+                    screenCaptureManager = ScreenCaptureManager(
+                        width: w, height: h,
+                        frameRate: Int(ExternalScreenConstants.defaultRefreshRate),
+                        showsCursor: false  // cursor is streamed separately (Task 8)
+                    )
+                    screenCaptureManager.delegate = self
+
+                    frameNumber = 0
+                    didDropFrames = false
+                    activeTransport.resetFlowControl()
+
+                    let config = DisplayConfigMessage(
+                        width: caps.pixelWidth,
+                        height: caps.pixelHeight,
+                        refreshRate: Float(ExternalScreenConstants.defaultRefreshRate)
+                    )
+                    activeTransport.sendMessage(type: .displayConfig, payload: config.toData())
+
+                    // Give WindowServer/SCK a moment to register the reconfigured display
+                    Task {
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        await MainActor.run { self.startCaptureAndEncoding() }
+                    }
+                }
+            }
+        }
     }
 
     private func updateStatusIcon(connected: Bool) {
@@ -541,12 +684,12 @@ extension AppDelegate: ScreenCaptureManagerDelegate {
 extension AppDelegate: H264EncoderDelegate {
     func h264Encoder(_ encoder: H264Encoder, didEncode data: Data, isKeyframe: Bool, presentationTime: CMTime) {
         // Flow control: drop P-frames when pipe is congested, always send keyframes
-        if !isKeyframe && !usbDeviceManager.canSendFrame() {
-            usbDeviceManager.incrementDroppedFrames()
+        if !isKeyframe && !activeTransport.canSendFrame() {
+            activeTransport.incrementDroppedFrames()
             didDropFrames = true
             // Log periodically
-            if usbDeviceManager.droppedFrameCount % 30 == 1 {
-                log("FlowControl: Dropped \(usbDeviceManager.droppedFrameCount) frames total")
+            if activeTransport.droppedFrameCount % 30 == 1 {
+                log("FlowControl: Dropped \(activeTransport.droppedFrameCount) frames total")
             }
             frameNumber += 1
             return
@@ -563,12 +706,12 @@ extension AppDelegate: H264EncoderDelegate {
 
         // Log every 120 frames (about once per second at 120fps)
         if frameNumber % 120 == 0 {
-            log("Encoder: Frame \(frameNumber), size=\(data.count), keyframe=\(isKeyframe), dropped=\(usbDeviceManager.droppedFrameCount)")
+            log("Encoder: Frame \(frameNumber), size=\(data.count), keyframe=\(isKeyframe), dropped=\(activeTransport.droppedFrameCount)")
         }
 
         // Send to connected iPad
         let pts = UInt64(presentationTime.seconds * 1_000_000)
-        usbDeviceManager.sendFrame(
+        activeTransport.sendFrame(
             frameData: data,
             frameNumber: frameNumber,
             isKeyframe: isKeyframe,
@@ -587,13 +730,19 @@ extension AppDelegate: H264EncoderDelegate {
 extension AppDelegate: FrameTransportDelegate {
     func transportDidConnect(_ transport: FrameTransport, endpointName: String) {
         log("Transport: connected to \(endpointName)")
-
         updateStatusIcon(connected: true)
         updateStatus("Connected - Streaming", state: .connected)
 
         transport.resetFlowControl()
         frameNumber = 0
 
+        if transport === networkTransport {
+            // Mac receiver: wait for displayCapabilities before configuring anything.
+            log("Transport: Mac receiver connected, waiting for display capabilities...")
+            return
+        }
+
+        // iPad path (unchanged)
         let config = DisplayConfigMessage(
             width: UInt32(effectiveWidth),
             height: UInt32(effectiveHeight),
@@ -601,12 +750,16 @@ extension AppDelegate: FrameTransportDelegate {
         )
         log("Transport: Sending display config \(effectiveWidth)x\(effectiveHeight)")
         transport.sendMessage(type: .displayConfig, payload: config.toData())
-
         startCaptureAndEncoding()
     }
 
     func transportDidDisconnect(_ transport: FrameTransport) {
         log("Transport: disconnected")
+
+        if transport === networkTransport {
+            networkTransport = nil
+            targetKind = .iPad
+        }
 
         updateStatusIcon(connected: false)
         updateStatus("Disconnected", state: isRunning ? .waiting : .idle)
@@ -648,6 +801,11 @@ extension AppDelegate: FrameTransportDelegate {
         case .orientationChange:
             if let orientationMsg = OrientationMessage.from(data: payload) {
                 handleOrientationChange(orientationMsg.orientation)
+            }
+
+        case .displayCapabilities:
+            if let caps = DisplayCapabilitiesMessage.from(data: payload) {
+                handleDisplayCapabilities(caps)
             }
 
         default:

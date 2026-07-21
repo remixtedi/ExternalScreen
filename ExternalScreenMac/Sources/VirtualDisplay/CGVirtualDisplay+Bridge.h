@@ -35,7 +35,8 @@ NS_ASSUME_NONNULL_BEGIN
                            ppi:(NSUInteger)ppi
                    refreshRate:(double)refreshRate
                           name:(NSString *)name
-                         hiDPI:(BOOL)hiDPI;
+                         hiDPI:(BOOL)hiDPI
+                     serialNum:(UInt32)serialNum;
 
 /// Destroys the virtual display
 - (void)destroyDisplay;

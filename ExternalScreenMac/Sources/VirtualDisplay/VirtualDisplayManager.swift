@@ -33,8 +33,9 @@ final class VirtualDisplayManager {
     private(set) var height: Int
     private(set) var refreshRate: Double
     private let ppi: Int
-    private let displayName: String
+    private var displayName: String
     private let hiDPI: Bool
+    private var serialNum: UInt32 = 0xE0190D01
 
     // MARK: - Initialization
 
@@ -86,7 +87,8 @@ final class VirtualDisplayManager {
             ppi: UInt(ppi),
             refreshRate: refreshRate,
             name: displayName,
-            hiDPI: hiDPI
+            hiDPI: hiDPI,
+            serialNum: serialNum
         )
 
         if success {
@@ -108,6 +110,24 @@ final class VirtualDisplayManager {
         bridge.destroyDisplay()
         isRunning = false
         delegate?.virtualDisplayDidDisconnect()
+    }
+
+    /// Destroys and recreates the virtual display at a Mac receiver's native
+    /// pixel resolution with HiDPI scaling. Returns true on success.
+    @discardableResult
+    func reconfigureForReceiver(pixelWidth: Int, pixelHeight: Int, refreshRate rate: Double) -> Bool {
+        if isRunning {
+            bridge.destroyDisplay()
+            isRunning = false
+        }
+
+        width = pixelWidth
+        height = pixelHeight
+        refreshRate = rate
+        displayName = "Mac External Display"
+        serialNum = 0xE0190D02  // distinct identity so macOS remembers arrangement separately from iPad
+
+        return start()
     }
 
     /// Updates the display resolution
