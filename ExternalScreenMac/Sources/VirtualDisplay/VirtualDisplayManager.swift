@@ -153,9 +153,11 @@ final class VirtualDisplayManager {
             isRunning = false
         }
 
-        // Clamp non-positive/sub-1 scale to 1 -- CGVirtualDisplayMode dims should never
-        // exceed the receiver's own pixel dims.
-        let effectiveScale = max(scale, 1)
+        // Clamp non-finite/non-positive/sub-1 scale to 1 -- CGVirtualDisplayMode dims
+        // should never exceed the receiver's own pixel dims, and a malformed
+        // displayCapabilities payload could otherwise deliver NaN/inf here, which would
+        // propagate through `Int(Double.nan)` below and trap.
+        let effectiveScale = (scale.isFinite && scale > 0) ? max(scale, 1) : 1
         let pointWidth = Int((Double(pixelWidth) / Double(effectiveScale)).rounded())
         let pointHeight = Int((Double(pixelHeight) / Double(effectiveScale)).rounded())
 
