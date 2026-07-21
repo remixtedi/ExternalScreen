@@ -39,6 +39,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var targetKind: TargetKind = .iPad
     /// Guards against re-entrant `connectToReceiver` calls (e.g. a double-click on the menu item).
     private var isConnectingToReceiver = false
+    /// Guards against re-entrant `enterReceiverMode` calls during the awaited host teardown,
+    /// when `receiverSession` is still nil but `isRunning` has already flipped false.
+    private var isEnteringReceiverMode = false
 
     // State
     private var isRunning = false
@@ -259,7 +262,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func enterReceiverMode() {
-        guard receiverSession == nil else { return }
+        guard receiverSession == nil, !isEnteringReceiverMode else { return }
+        isEnteringReceiverMode = true
         log("Entering receiver mode")
 
         // Host and receiver roles are mutually exclusive. If the host pipeline is
@@ -308,6 +312,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             showAlert(title: "Receiver Mode Failed",
                       message: "Could not listen on port \(ExternalScreenConstants.networkPort): \(error.localizedDescription)")
         }
+        isEnteringReceiverMode = false
     }
 
     private func reinitializeComponentsWithCurrentPreset() {
