@@ -9,7 +9,9 @@
 /* Begin PBXBuildFile section */
 		0DC532C97E282094824696B4 /* PTChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 93B37B4D2845F28D4DDFC3EC /* PTChannel.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		12624D830C96886AF5A0BC4D /* PTUSBHub.m in Sources */ = {isa = PBXBuildFile; fileRef = 2446CA09896F968882B6F288 /* PTUSBHub.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		40DAE7BA05D798933F9BC489 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D4CFD47B48FA7BB5DBEA8E6 /* Constants.swift */; };
 		4904C4F852BFCB22D30492A5 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 59378F5E8DADD08131015E3F /* UIKit.framework */; };
+		52EAACD4533D6D63C7A12977 /* Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86CA5CF89C19C2F5FA6C3139 /* Protocol.swift */; };
 		56BDC834D182B23EACE6F8C6 /* USBConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C29FC3E8CA0B51711DE0DA38 /* USBConnectionManager.swift */; };
 		59E5112B032038D73AD02252 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7123E40B59B9F4951797F46C /* Metal.framework */; };
 		5D2B3D2E7CB9B8A41C790899 /* PTProtocol.m in Sources */ = {isa = PBXBuildFile; fileRef = D1B7746228DE612737CC77B1 /* PTProtocol.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
@@ -44,11 +46,13 @@
 		EC7CFB1FFC8F7798AE2E0733 /* PTUSBHub.m in Sources */ = {isa = PBXBuildFile; fileRef = 2D4BA93BD543A017CDA14CC3 /* PTUSBHub.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		EF42FCC52167FD9368D9E563 /* VirtualDisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C601BC53C141D3ADF6B75DAD /* VirtualDisplayManager.swift */; };
 		EF8FB9AF64879C4D7E5643F9 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6076A8CB0797D7FB7CE80CD7 /* MainWindowController.swift */; };
+		F30238006C90BCAECDCB0F3A /* ProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01701982C703394CF40A11B8 /* ProtocolTests.swift */; };
 		FAA4DBB95CA147A96EFE18A2 /* USBDeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4BAA42FCAE08C4EBF14659D /* USBDeviceManager.swift */; };
 		FACB940373545F420E083151 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D4CFD47B48FA7BB5DBEA8E6 /* Constants.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		01701982C703394CF40A11B8 /* ProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolTests.swift; sourceTree = "<group>"; };
 		0A79D1C02BAAEC3C46802D39 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		0C3AD6543F719AE380AC0C96 /* H264Decoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = H264Decoder.swift; sourceTree = "<group>"; };
 		0D5AD6A0B26DFA057617F36D /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
@@ -90,6 +94,7 @@
 		B0681FE3BFB2571EE3FFD5DE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C29FC3E8CA0B51711DE0DA38 /* USBConnectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = USBConnectionManager.swift; sourceTree = "<group>"; };
 		C601BC53C141D3ADF6B75DAD /* VirtualDisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualDisplayManager.swift; sourceTree = "<group>"; };
+		D17D9F090748F3102F340DD6 /* ExternalScreenTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ExternalScreenTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1B7746228DE612737CC77B1 /* PTProtocol.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTProtocol.m; sourceTree = "<group>"; };
 		D6F9C98DAAD8335B757DF9C0 /* DisplayViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayViewController.swift; sourceTree = "<group>"; };
 		D7AAC182BD9CFA419B901DE0 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -218,6 +223,7 @@
 			children = (
 				4C873C53F9E6442C1C7A6D73 /* ExternalScreenIOS.app */,
 				71A9067CEFC96EE46AEFC7BF /* ExternalScreenMac.app */,
+				D17D9F090748F3102F340DD6 /* ExternalScreenTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -307,6 +313,14 @@
 			path = VideoDecoder;
 			sourceTree = "<group>";
 		};
+		C719EE2DBE4ECB738EB12245 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				01701982C703394CF40A11B8 /* ProtocolTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
 		D02C08B8BA5EF108BCD651B2 /* ScreenCapture */ = {
 			isa = PBXGroup;
 			children = (
@@ -333,6 +347,7 @@
 				6697D4EA58CAB12C32DDCB0D /* Shared */,
 				FE0F97D05015F793EDFFD40A /* Sources */,
 				1DA3D07963C6229356E6C0EB /* Sources */,
+				C719EE2DBE4ECB738EB12245 /* Tests */,
 				366235837485787AB3E5552D /* Frameworks */,
 				647A3EB65AED60023B3F34A3 /* Products */,
 			);
@@ -373,6 +388,23 @@
 			productReference = 4C873C53F9E6442C1C7A6D73 /* ExternalScreenIOS.app */;
 			productType = "com.apple.product-type.application";
 		};
+		553931EE821F634B64EE4BF5 /* ExternalScreenTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8565752051B3AEAE67C19A7F /* Build configuration list for PBXNativeTarget "ExternalScreenTests" */;
+			buildPhases = (
+				579FDC334752FE4C8803C337 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ExternalScreenTests;
+			packageProductDependencies = (
+			);
+			productName = ExternalScreenTests;
+			productReference = D17D9F090748F3102F340DD6 /* ExternalScreenTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		EB2EFC43CA3C28182A98606F /* ExternalScreenMac */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = AC1DF72304E30D26AFE05A63 /* Build configuration list for PBXNativeTarget "ExternalScreenMac" */;
@@ -405,6 +437,10 @@
 						DevelopmentTeam = YOUR_TEAM_ID_HERE;
 						ProvisioningStyle = Automatic;
 					};
+					553931EE821F634B64EE4BF5 = {
+						DevelopmentTeam = YOUR_TEAM_ID_HERE;
+						ProvisioningStyle = Automatic;
+					};
 					EB2EFC43CA3C28182A98606F = {
 						DevelopmentTeam = YOUR_TEAM_ID_HERE;
 						ProvisioningStyle = Automatic;
@@ -412,7 +448,6 @@
 				};
 			};
 			buildConfigurationList = 40E0B9AE607994C107963191 /* Build configuration list for PBXProject "ExternalScreen" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -422,11 +457,13 @@
 			mainGroup = E7E21E56418BFD5A2A2C0478;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
+			productRefGroup = 647A3EB65AED60023B3F34A3 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				111A4F31801ACC73E77D0C40 /* ExternalScreenIOS */,
 				EB2EFC43CA3C28182A98606F /* ExternalScreenMac */,
+				111A4F31801ACC73E77D0C40 /* ExternalScreenIOS */,
+				553931EE821F634B64EE4BF5 /* ExternalScreenTests */,
 			);
 		};
 /* End PBXProject section */
@@ -451,6 +488,16 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		579FDC334752FE4C8803C337 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				40DAE7BA05D798933F9BC489 /* Constants.swift in Sources */,
+				52EAACD4533D6D63C7A12977 /* Protocol.swift in Sources */,
+				F30238006C90BCAECDCB0F3A /* ProtocolTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7095EFFA6EF6D4DC33B4F215 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -495,6 +542,23 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		8FDF35AF7EEAE6B39B351FCB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.externalscreen.tests;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		987946BC44363DF37CE9515C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -590,6 +654,23 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.externalscreen.mac;
 				SDKROOT = macosx;
 				SWIFT_OBJC_BRIDGING_HEADER = "ExternalScreenMac/ExternalScreenMac-Bridging-Header.h";
+			};
+			name = Debug;
+		};
+		9F41F09930D355CBE8C6C18A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.externalscreen.tests;
+				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
@@ -692,6 +773,15 @@
 			buildConfigurations = (
 				99AE389D861592D04C844EAB /* Debug */,
 				E10504D53655F0481713E6C1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8565752051B3AEAE67C19A7F /* Build configuration list for PBXNativeTarget "ExternalScreenTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9F41F09930D355CBE8C6C18A /* Debug */,
+				8FDF35AF7EEAE6B39B351FCB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
