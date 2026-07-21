@@ -36,6 +36,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private enum TargetKind { case iPad, macReceiver }
     private var targetKind: TargetKind = .iPad
+    /// Guards against re-entrant `connectToReceiver` calls (e.g. a double-click on the menu item).
+    private var isConnectingToReceiver = false
 
     // State
     private var isRunning = false
@@ -204,6 +206,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func connectToReceiver(_ sender: NSMenuItem) {
         guard sender.tag >= 0 && sender.tag < discoveredReceivers.count else { return }
+        guard !isConnectingToReceiver else {
+            log("connectToReceiver: Already connecting, ignoring duplicate request")
+            return
+        }
+        isConnectingToReceiver = true
+
         let receiver = discoveredReceivers[sender.tag]
         log("Connecting to Mac receiver: \(receiver.name)")
 
@@ -220,6 +228,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 startPipeline()
             }
             transport.start()
+            isConnectingToReceiver = false
         }
 
         // An iPad session must not run concurrently with a Mac receiver session.
@@ -469,6 +478,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     networkTransport?.disconnect()
                     networkTransport = nil
                     targetKind = .iPad
+                    isConnectingToReceiver = false
                     // Keep virtual display active to preserve position settings
                     // virtualDisplayManager.stop() - commented out to preserve position
 
@@ -485,6 +495,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             networkTransport?.disconnect()
             networkTransport = nil
             targetKind = .iPad
+            isConnectingToReceiver = false
             // Keep virtual display active to preserve position settings
 
             updateStatusIcon(connected: false)
@@ -588,6 +599,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     guard ok else {
                         updateStatus("Failed to create display", state: .idle)
                         networkTransport?.disconnect()
+                        // NetworkHostTransport.disconnect() sets connected=false synchronously, so the
+                        // later .cancelled event sees wasConnected==false and never fires
+                        // transportDidDisconnect. Reset these fields ourselves so the iPad path isn't
+                        // permanently locked out by the transportDidConnect mutual-exclusion guard.
+                        networkTransport = nil
+                        targetKind = .iPad
                         reinitializeComponentsWithCurrentPreset()
                         return
                     }
@@ -801,9 +818,11 @@ extension AppDelegate: FrameTransportDelegate {
     func transportDidDisconnect(_ transport: FrameTransport) {
         log("Transport: disconnected")
 
-        if transport === networkTransport {
+        let wasMacReceiver = transport === networkTransport
+        if wasMacReceiver {
             networkTransport = nil
             targetKind = .iPad
+            isConnectingToReceiver = false
         }
 
         updateStatusIcon(connected: false)
@@ -815,6 +834,11 @@ extension AppDelegate: FrameTransportDelegate {
                 await MainActor.run {
                     h264Encoder.stop()
                     frameNumber = 0
+                    if wasMacReceiver {
+                        // A Mac-receiver session left Mac-native-sized components behind;
+                        // rebuild at the current iPad preset so the next iPad connect isn't mismatched.
+                        reinitializeComponentsWithCurrentPreset()
+                    }
                     if isRunning {
                         updateStatus("Waiting for connection...", state: .waiting)
                     }
