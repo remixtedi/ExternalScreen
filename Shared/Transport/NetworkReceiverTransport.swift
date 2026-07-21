@@ -12,6 +12,7 @@ public final class NetworkReceiverTransport: FrameTransport {
     private let flowControl = FlowControlState()
     private let queue = DispatchQueue(label: "com.externalscreen.network.receiver")
     private var connected = false
+    private let lock = NSLock()
     private let serviceName: String
 
     public init(serviceName: String) {
@@ -43,7 +44,11 @@ public final class NetworkReceiverTransport: FrameTransport {
         listener = nil
     }
 
-    public var isConnected: Bool { connected }
+    public var isConnected: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return connected
+    }
 
     public var droppedFrameCount: UInt64 { flowControl.droppedFrameCount }
 
@@ -71,7 +76,9 @@ public final class NetworkReceiverTransport: FrameTransport {
     public func disconnect() {
         networkConnection?.cancel()
         networkConnection = nil
+        lock.lock()
         connected = false
+        lock.unlock()
     }
 
     private func accept(_ nwConnection: NWConnection) {
@@ -89,13 +96,20 @@ public final class NetworkReceiverTransport: FrameTransport {
             guard let self = self else { return }
             switch state {
             case .ready:
+                self.lock.lock()
+                let wasConnected = self.connected
                 self.connected = true
+                self.lock.unlock()
+                guard !wasConnected else { return }
                 DispatchQueue.main.async {
                     self.transportDelegate?.transportDidConnect(self, endpointName: "Host Mac")
                 }
             case .failed, .cancelled:
+                self.lock.lock()
                 let wasConnected = self.connected
                 self.connected = false
+                self.lock.unlock()
+                self.networkConnection = nil
                 if wasConnected {
                     DispatchQueue.main.async {
                         self.transportDelegate?.transportDidDisconnect(self)

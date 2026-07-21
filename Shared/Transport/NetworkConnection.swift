@@ -55,6 +55,7 @@ final class NetworkConnection {
             }
 
             if isComplete || error != nil {
+                self.connection.cancel()
                 self.onStateChange?(.cancelled)
                 return
             }
