@@ -11,11 +11,13 @@ final class CursorStreamer {
     private var imageTimer: Timer?
     private var lastImagePNG: Data?
     private var wasOnDisplay = false
+    private var receiverScale: CGFloat = 2.0
 
-    func start(displayID: CGDirectDisplayID, transport: FrameTransport) {
+    func start(displayID: CGDirectDisplayID, transport: FrameTransport, receiverScale: CGFloat) {
         stop()
         self.displayID = displayID
         self.transport = transport
+        self.receiverScale = (receiverScale.isFinite && receiverScale > 0) ? receiverScale : 2.0
 
         let events: NSEvent.EventTypeMask = [
             .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged
@@ -95,13 +97,22 @@ final class CursorStreamer {
         let cursor = NSCursor.currentSystem ?? NSCursor.current
         let image = cursor.image
 
-        // Prefer the largest bitmap rep (Retina cursors ship 1x/2x/3x reps); picking the
-        // first one — which `NSBitmapImageRep(data: tiffRepresentation)` does — grabs the
-        // 1x rep and renders half-size/blurry on a Retina receiver.
+        // Pick the bitmap rep whose pixel width matches the receiver's scale, not simply
+        // the largest available rep: system cursor images can carry very large
+        // accessibility/cursor-zoom reps alongside the normal 1x/2x/3x set, and picking
+        // "largest" grabs those oversized reps, streaming a giant image that the receiver
+        // then draws 1:1 in drawable pixels. Target pixel width = point size * receiver scale.
+        let targetWidth = image.size.width * receiverScale
         let bitmapReps = image.representations.compactMap { $0 as? NSBitmapImageRep }
         let rep: NSBitmapImageRep?
-        if let largest = bitmapReps.max(by: { $0.pixelsWide < $1.pixelsWide }) {
-            rep = largest
+        if let closest = bitmapReps.min(by: { lhs, rhs in
+            let lhsDelta = abs(CGFloat(lhs.pixelsWide) - targetWidth)
+            let rhsDelta = abs(CGFloat(rhs.pixelsWide) - targetWidth)
+            if lhsDelta != rhsDelta { return lhsDelta < rhsDelta }
+            // Tie: prefer the rep that meets or exceeds the target size.
+            return CGFloat(lhs.pixelsWide) >= targetWidth && CGFloat(rhs.pixelsWide) < targetWidth
+        }) {
+            rep = closest
         } else if let tiff = image.tiffRepresentation {
             rep = NSBitmapImageRep(data: tiff)
         } else {

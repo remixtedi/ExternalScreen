@@ -767,7 +767,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                             self.startCaptureAndEncoding()
                             self.cursorStreamer.start(
                                 displayID: self.virtualDisplayManager.displayID,
-                                transport: transport
+                                transport: transport,
+                                receiverScale: CGFloat(caps.scale)
                             )
                         }
                     }
