@@ -1,0 +1,110 @@
+import Foundation
+import Network
+
+/// Receiver-side transport: listens on TCP port 2346, advertises itself
+/// via Bonjour, and accepts a single host connection.
+public final class NetworkReceiverTransport: FrameTransport {
+
+    public weak var transportDelegate: FrameTransportDelegate?
+
+    private var listener: NWListener?
+    private var networkConnection: NetworkConnection?
+    private let flowControl = FlowControlState()
+    private let queue = DispatchQueue(label: "com.externalscreen.network.receiver")
+    private var connected = false
+    private let serviceName: String
+
+    public init(serviceName: String) {
+        self.serviceName = serviceName
+    }
+
+    public func start() throws {
+        let listener = try NWListener(
+            using: NetworkConnection.makeParameters(),
+            on: NWEndpoint.Port(rawValue: ExternalScreenConstants.networkPort)!
+        )
+        listener.service = NWListener.Service(
+            name: serviceName,
+            type: ExternalScreenConstants.bonjourServiceType
+        )
+        listener.newConnectionHandler = { [weak self] nwConnection in
+            self?.accept(nwConnection)
+        }
+        listener.stateUpdateHandler = { state in
+            print("NetworkReceiverTransport: listener state \(state)")
+        }
+        listener.start(queue: queue)
+        self.listener = listener
+    }
+
+    public func stop() {
+        disconnect()
+        listener?.cancel()
+        listener = nil
+    }
+
+    public var isConnected: Bool { connected }
+
+    public var droppedFrameCount: UInt64 { flowControl.droppedFrameCount }
+
+    public func sendMessage(type: MessageType, payload: Data) {
+        let header = MessageHeader(
+            type: type,
+            timestamp: UInt64(Date().timeIntervalSince1970 * 1_000_000),
+            payloadLength: UInt32(payload.count)
+        )
+        var message = header.toData()
+        message.append(payload)
+        networkConnection?.send(message)
+    }
+
+    public func sendFrame(frameData: Data, frameNumber: UInt32, isKeyframe: Bool, presentationTime: UInt64) {
+        // Receiver never streams video; present for FrameTransport conformance.
+    }
+
+    public func canSendFrame() -> Bool { true }
+
+    public func incrementDroppedFrames() {}
+
+    public func resetFlowControl() { flowControl.reset() }
+
+    public func disconnect() {
+        networkConnection?.cancel()
+        networkConnection = nil
+        connected = false
+    }
+
+    private func accept(_ nwConnection: NWConnection) {
+        // Replace any existing connection (matches iPad-side behavior)
+        networkConnection?.cancel()
+
+        let conn = NetworkConnection(connection: nwConnection)
+        networkConnection = conn
+
+        conn.onMessage = { [weak self] message in
+            guard let self = self else { return }
+            self.transportDelegate?.transport(self, didReceive: message)
+        }
+        conn.onStateChange = { [weak self] state in
+            guard let self = self else { return }
+            switch state {
+            case .ready:
+                self.connected = true
+                DispatchQueue.main.async {
+                    self.transportDelegate?.transportDidConnect(self, endpointName: "Host Mac")
+                }
+            case .failed, .cancelled:
+                let wasConnected = self.connected
+                self.connected = false
+                if wasConnected {
+                    DispatchQueue.main.async {
+                        self.transportDelegate?.transportDidDisconnect(self)
+                    }
+                }
+            default:
+                break
+            }
+        }
+        conn.start(queue: queue)
+    }
+}
