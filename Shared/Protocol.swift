@@ -12,6 +12,9 @@ public enum MessageType: UInt32 {
     case touchCancelled = 7
     case disconnect = 8
     case orientationChange = 9
+    case displayCapabilities = 10
+    case cursorPosition = 11
+    case cursorImage = 12
 }
 
 /// Screen orientation sent from iPad to Mac
@@ -243,5 +246,111 @@ public struct FrameAckMessage {
         let frameNumber = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 0, as: UInt32.self) }
         let receivedTime = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 4, as: UInt64.self) }
         return FrameAckMessage(frameNumber: frameNumber, receivedTime: receivedTime)
+    }
+}
+
+/// Receiver's native display capabilities sent from Mac receiver to host
+public struct DisplayCapabilitiesMessage {
+    public let pixelWidth: UInt32
+    public let pixelHeight: UInt32
+    public let scale: Float
+
+    public init(pixelWidth: UInt32, pixelHeight: UInt32, scale: Float) {
+        self.pixelWidth = pixelWidth
+        self.pixelHeight = pixelHeight
+        self.scale = scale
+    }
+
+    public static let size = 12  // 4 + 4 + 4 bytes
+
+    public func toData() -> Data {
+        var data = Data(capacity: DisplayCapabilitiesMessage.size)
+        var w = pixelWidth
+        var h = pixelHeight
+        var s = scale
+        data.append(Data(bytes: &w, count: 4))
+        data.append(Data(bytes: &h, count: 4))
+        data.append(Data(bytes: &s, count: 4))
+        return data
+    }
+
+    public static func from(data: Data) -> DisplayCapabilitiesMessage? {
+        guard data.count >= DisplayCapabilitiesMessage.size else { return nil }
+        let w = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 0, as: UInt32.self) }
+        let h = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 4, as: UInt32.self) }
+        let s = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 8, as: Float.self) }
+        return DisplayCapabilitiesMessage(pixelWidth: w, pixelHeight: h, scale: s)
+    }
+}
+
+/// Cursor position sent from host to Mac receiver (normalized 0.0-1.0)
+public struct CursorPositionMessage {
+    public let x: Float
+    public let y: Float
+    public let visible: Bool
+
+    public init(x: Float, y: Float, visible: Bool) {
+        self.x = x
+        self.y = y
+        self.visible = visible
+    }
+
+    public static let size = 9  // 4 + 4 + 1 bytes
+
+    public func toData() -> Data {
+        var data = Data(capacity: CursorPositionMessage.size)
+        var xv = x
+        var yv = y
+        var v: UInt8 = visible ? 1 : 0
+        data.append(Data(bytes: &xv, count: 4))
+        data.append(Data(bytes: &yv, count: 4))
+        data.append(Data(bytes: &v, count: 1))
+        return data
+    }
+
+    public static func from(data: Data) -> CursorPositionMessage? {
+        guard data.count >= CursorPositionMessage.size else { return nil }
+        let x = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 0, as: Float.self) }
+        let y = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 4, as: Float.self) }
+        let v = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 8, as: UInt8.self) }
+        return CursorPositionMessage(x: x, y: y, visible: v != 0)
+    }
+}
+
+/// Cursor image (PNG) sent from host to Mac receiver when the cursor changes.
+/// Hotspot is in image pixel coordinates.
+public struct CursorImageMessage {
+    public let hotspotX: Float
+    public let hotspotY: Float
+    public let pngData: Data
+
+    public init(hotspotX: Float, hotspotY: Float, pngData: Data) {
+        self.hotspotX = hotspotX
+        self.hotspotY = hotspotY
+        self.pngData = pngData
+    }
+
+    public static let headerSize = 12  // 4 + 4 + 4 bytes
+
+    public func toData() -> Data {
+        var data = Data(capacity: CursorImageMessage.headerSize + pngData.count)
+        var hx = hotspotX
+        var hy = hotspotY
+        var len = UInt32(pngData.count)
+        data.append(Data(bytes: &hx, count: 4))
+        data.append(Data(bytes: &hy, count: 4))
+        data.append(Data(bytes: &len, count: 4))
+        data.append(pngData)
+        return data
+    }
+
+    public static func from(data: Data) -> CursorImageMessage? {
+        guard data.count >= CursorImageMessage.headerSize else { return nil }
+        let hx = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 0, as: Float.self) }
+        let hy = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 4, as: Float.self) }
+        let len = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 8, as: UInt32.self) }
+        guard data.count >= CursorImageMessage.headerSize + Int(len) else { return nil }
+        let png = data.subdata(in: CursorImageMessage.headerSize..<(CursorImageMessage.headerSize + Int(len)))
+        return CursorImageMessage(hotspotX: hx, hotspotY: hy, pngData: png)
     }
 }

@@ -86,6 +86,20 @@ targets:
       - sdk: CoreMedia.framework
       - sdk: UIKit.framework
 
+  ExternalScreenTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Tests
+        type: group
+      - path: Shared
+        type: group
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.externalscreen.tests
+        CODE_SIGN_STYLE: Automatic
+
 schemes:
   ExternalScreenMac:
     build:
@@ -108,3 +122,11 @@ schemes:
       config: Release
     archive:
       config: Release
+
+  ExternalScreenTests:
+    build:
+      targets:
+        ExternalScreenTests: all
+    test:
+      targets:
+        - ExternalScreenTests

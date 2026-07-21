@@ -60,7 +60,13 @@ public enum ExternalScreenConstants {
     public static let keyframeInterval: Int = 15  // Every 15 frames at 60fps = every 0.25 sec
 
     /// Protocol version for compatibility checking
-    public static let protocolVersion: UInt32 = 1
+    public static let protocolVersion: UInt32 = 2
+
+    /// TCP port for Mac-to-Mac communication over Thunderbolt Bridge
+    public static let networkPort: UInt16 = 2346
+
+    /// Bonjour service type for Mac receiver discovery
+    public static let bonjourServiceType = "_extscreen._tcp"
 
     /// Maximum frame size in bytes (for buffer allocation)
     public static let maxFrameSize: Int = 1024 * 1024 * 2  // 2 MB
