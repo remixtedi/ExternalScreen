@@ -64,6 +64,7 @@
 		B7F2966AEB24BC7CF4E282E0 /* NetworkReceiverTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BC9F139709135924FAA8C5C /* NetworkReceiverTransport.swift */; };
 		B98A5FCCDD05B0D448CCD5CE /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A79D1C02BAAEC3C46802D39 /* MetalKit.framework */; };
 		BD12F5D3A9C6E950834D9FF3 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18C4ED281632D7ED2C2B18C8 /* VideoToolbox.framework */; };
+		C09B1A8D21F81D116E0F161E /* ReceiverSessionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD641E7AA27954E7AEB954FD /* ReceiverSessionController.swift */; };
 		C1A4854F134989EBC50B1B96 /* FlowControlStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DA380EEC5417C4707A4DE61 /* FlowControlStateTests.swift */; };
 		C72BBE3E14CB03199E44A181 /* H264Encoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B86D1028E71FDA27E76F7FA /* H264Encoder.swift */; };
 		C825A37A4B9D97178787A411 /* TouchCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49AD430355BE6E6D77C189FC /* TouchCaptureView.swift */; };
@@ -132,6 +133,7 @@
 		A73F60FCCF171668540A35BC /* Peertalk.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Peertalk.h; sourceTree = "<group>"; };
 		AB2A5D532EA0B7C6C699FB07 /* TouchEventHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchEventHandler.swift; sourceTree = "<group>"; };
 		ACCEFDDC511068F92542EE99 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AD641E7AA27954E7AEB954FD /* ReceiverSessionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverSessionController.swift; sourceTree = "<group>"; };
 		B0681FE3BFB2571EE3FFD5DE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		B3B361E00B1DA05063943C72 /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
 		B72330608F64186E8DE903DA /* ReceiverBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverBrowser.swift; sourceTree = "<group>"; };
@@ -216,6 +218,7 @@
 			children = (
 				1486AD463B19B9E1BFD04AA0 /* App */,
 				BB4B9CDAB1198B7EEF6761D0 /* InputRelay */,
+				9E9F7BD2C8A712B58D4E8452 /* Receiver */,
 				D02C08B8BA5EF108BCD651B2 /* ScreenCapture */,
 				C57F0663025E35E3750DF4B4 /* USB */,
 				DDE870357136A6B78FA02493 /* VideoEncoder */,
@@ -330,6 +333,14 @@
 			);
 			name = PeerTalk;
 			path = ExternalScreenMac/Vendor/PeerTalk;
+			sourceTree = "<group>";
+		};
+		9E9F7BD2C8A712B58D4E8452 /* Receiver */ = {
+			isa = PBXGroup;
+			children = (
+				AD641E7AA27954E7AEB954FD /* ReceiverSessionController.swift */,
+			);
+			path = Receiver;
 			sourceTree = "<group>";
 		};
 		A2210D3C5374F7DD4646FBDB /* PeerTalk */ = {
@@ -603,6 +614,7 @@
 				12624D830C96886AF5A0BC4D /* PTUSBHub.m in Sources */,
 				E051D27EF0DB10A10429120B /* Protocol.swift in Sources */,
 				DF99861AA39F36E58D1700ED /* ReceiverBrowser.swift in Sources */,
+				C09B1A8D21F81D116E0F161E /* ReceiverSessionController.swift in Sources */,
 				D7DC270A64BF1E22BCE452BB /* ScreenCaptureManager.swift in Sources */,
 				981AB008D0453FDDD749F4E0 /* Shaders.metal in Sources */,
 				67332D896F333D3C30F78936 /* TouchEventHandler.swift in Sources */,

@@ -28,6 +28,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var receiverBrowser: ReceiverBrowser!
     private var discoveredReceivers: [DiscoveredReceiver] = []
     private var receiversMenu: NSMenu!
+    private var receiverSession: ReceiverSessionController?
 
     /// The transport currently carrying the stream (PeerTalk for iPad by default).
     private var activeTransport: FrameTransport {
@@ -91,6 +92,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         stopPipeline()
+        receiverSession?.stop()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -142,6 +144,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         receiversMenuItem.submenu = receiversMenu
         menu.addItem(receiversMenuItem)
         rebuildReceiversMenu()
+
+        menu.addItem(NSMenuItem(title: "Use This Mac as Receiver", action: #selector(enterReceiverMode), keyEquivalent: "r"))
 
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Show Window", action: #selector(showMainWindow), keyEquivalent: "w"))
@@ -251,6 +255,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             h264Encoder.stop()
             usbDeviceManager.disconnect()
             beginConnection()
+        }
+    }
+
+    @objc private func enterReceiverMode() {
+        guard receiverSession == nil else { return }
+        log("Entering receiver mode")
+
+        // Host and receiver roles are mutually exclusive
+        if isRunning { stopPipeline() }
+
+        let session = ReceiverSessionController()
+        session.onExit = { [weak self] in
+            self?.receiverSession = nil
+            self?.log("Exited receiver mode")
+        }
+        do {
+            try session.start()
+            receiverSession = session
+        } catch {
+            log("Failed to start receiver mode: \(error)")
+            showAlert(title: "Receiver Mode Failed",
+                      message: "Could not listen on port \(ExternalScreenConstants.networkPort): \(error.localizedDescription)")
         }
     }
 

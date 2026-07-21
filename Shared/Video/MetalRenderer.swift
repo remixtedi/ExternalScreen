@@ -38,7 +38,7 @@ final class MetalRenderer: NSObject {
     private var cursorPosition: (x: Float, y: Float) = (0, 0)
     private var cursorVisible = false
     private let cursorLock = NSLock()
-    private lazy var textureLoader = MTKTextureLoader(device: device)
+    private let textureLoader: MTKTextureLoader
 
     // MARK: - Initialization
 
@@ -56,6 +56,7 @@ final class MetalRenderer: NSObject {
         self.device = device
         self.commandQueue = commandQueue
         self.metalView = metalView
+        self.textureLoader = MTKTextureLoader(device: device)
 
         // Create texture cache
         var cache: CVMetalTextureCache?
