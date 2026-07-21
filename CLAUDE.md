@@ -12,7 +12,7 @@ External Screen is a macOS + iOS application that enables using an iPad as an ex
 
 1. **Host mode (iPad receiver)**: Uses USB to stream from a Mac to a connected iPad. The Mac captures screen content, encodes it as H.264, and streams it to the iPad, which decodes and renders via Metal. Touch events flow back from iPad to Mac.
 
-2. **Receiver mode (Mac receiver)**: Any Mac with "Allow Using as Display" enabled (on by default) listens over the local network (TCP port 2346 via Bonjour) in standby — no window, just the listener. Picking that Mac's name from "Connect to Mac" on another Mac (the host) auto-starts the host pipeline and connects; once the handshake succeeds, the receiver auto-activates into a fullscreen window and decodes/renders the stream, with cursor position and image updates sent by the host. Esc on the receiver, or the host disconnecting, returns it to standby (the listener keeps running). A Mac can't be an active receiver and an active host at the same time.
+2. **Receiver mode (Mac receiver)**: Any Mac with "Allow Using as Display" enabled (on by default) advertises itself in standby (TCP 2346 + Bonjour, no window). Picking its name under "Connect to Mac" on the host auto-connects; the receiver auto-activates into a fullscreen window. Esc or host disconnect returns it to standby. A Mac is never an active host and active receiver simultaneously. Details in "Mac-to-Mac Mode" below.
 
 ## Build Commands
 
@@ -33,23 +33,30 @@ xcodegen generate
 # Build from command line
 xcodebuild -project ExternalScreen.xcodeproj -scheme ExternalScreenMac -configuration Debug build
 xcodebuild -project ExternalScreen.xcodeproj -scheme ExternalScreenIOS -configuration Debug -destination 'platform=iOS,name=<device>' build
+
+# Run unit tests (23 tests: protocol round-trips, MessageDeframer, FlowControlState)
+xcodebuild test -project ExternalScreen.xcodeproj -scheme ExternalScreenTests -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO
 ```
 
-**Requirements**: macOS 14.0+, iOS 17.0+, Xcode 15+. Mac app needs Screen Recording permission. Target: 60fps streaming.
+**Requirements**: macOS 14.0+, iOS 17.0+, Xcode 15+. Mac app needs Screen Recording permission (host mode) and Local Network permission (Mac-to-Mac, prompted on first launch). Target: 60fps streaming.
 
 ## Architecture
 
 ### Communication Flow
 ```
-Mac: Virtual Display → ScreenCaptureKit → H264Encoder → USB (PeerTalk) → iPad
-iPad: USB (PeerTalk) → H264Decoder → MetalRenderer → Display
-iPad: TouchCaptureView → USB → Mac: TouchEventHandler → CGEvents
+Mac host:  Virtual Display → ScreenCaptureKit → H264Encoder → USB (PeerTalk) → iPad
+iPad:      USB (PeerTalk) → H264Decoder → MetalRenderer → Display
+iPad:      TouchCaptureView → USB → Mac: TouchEventHandler → CGEvents
+
+Mac host:  Virtual Display → ScreenCaptureKit → H264Encoder → TCP (Thunderbolt Bridge) → Mac receiver
+Mac host:  CursorStreamer (120 Hz poll, off main thread) → TCP → Mac receiver: Metal cursor overlay
+Mac recv:  TCP → H264Decoder → MetalRenderer → fullscreen window (frameAck back per frame)
 ```
 
 ### Key Components
 
 **Shared/** - Cross-platform code
-- `Constants.swift` - USB port (2345), TCP port (2346 for Mac-to-Mac), `DisplayPreset` enum with 4 resolution tiers (default: medium 1440×1005 @ 25 Mbps), flow control (`maxInFlightFrames: 4`, `captureQueueDepth: 2`), keyframe interval (15 frames), receiver bitrate scaling (~10 bits/px/s, capped 80 Mbps)
+- `Constants.swift` - USB port (2345), TCP port (2346 for Mac-to-Mac), `DisplayPreset` enum with 4 resolution tiers (default: medium 1440×1005 @ 25 Mbps, iPad only — Mac receivers always use their native scale), flow control (`maxInFlightFrames: 4` USB / `networkMaxInFlightFrames: 8` TCP, `captureQueueDepth: 2`), keyframe interval (`keyframeInterval: 15` iPad / `networkKeyframeInterval: 60` Mac receivers), receiver bitrate scaling (~10 bits/px/s, capped 80 Mbps)
 - `Protocol.swift` - Binary message protocol with 16-byte headers (handshake, displayConfig, frameData, frameAck, touch events, disconnect, displayCapabilities, cursorPosition, cursorImage)
 - `Transport/` - Abstraction for frame transport (USB or network). Contains `FrameTransport` protocol, `PeerTalk` conformance in `USBDeviceManager`, `NetworkHostTransport`, `NetworkReceiverTransport`, `ReceiverBrowser` (Bonjour discovery), `MessageDeframer`, `FlowControlState`
 - `Video/` - Cross-platform video components. Contains `H264Decoder` (VideoToolbox decoding, SPS/PPS handling) and `MetalRenderer` (Metal texture rendering with cursor overlay), moved from iOS target
@@ -105,8 +112,16 @@ Touch coordinates are normalized 0.0-1.0 relative to display bounds.
 
 ## Mac-to-Mac Mode
 
-Every Mac with "Allow Using as Display" enabled runs a `ReceiverSessionController` in standby from launch — listening on TCP port 2346 and advertising via Bonjour, with no window. From the host Mac, choosing that Mac's name under "Connect to Mac" auto-starts the host pipeline and opens a TCP connection; the receiver's own host pipeline running (`isRunning`) causes it to reject the incoming handshake so a Mac is never simultaneously an active host and an active receiver. Once the handshake succeeds, the receiver auto-activates: it builds a fullscreen window, decodes and renders incoming H.264 frames, and overlays the cursor. Cursor streaming is decoupled from frame streaming; the host sends cursor updates (position and image) separately from video frames, allowing smooth cursor motion independent of frame rate. On host disconnect or Esc, the receiver tears down the window/decoder/renderer and returns to standby — the transport listener is never stopped, so it can be reconnected to immediately.
+Connection sequence: host connects over TCP → host sends `handshake` (protocol version) → receiver validates version (mismatch → logged disconnect), replies with its own `handshake` + `displayCapabilities` (native pixel size + scale) → host recreates the virtual display at the receiver's logical size with Retina backing, then sends `displayConfig` and starts streaming. The receiver ignores frame/cursor messages until the handshake completes. Cursor streaming is decoupled from video: the host polls the cursor at 120 Hz off the main thread and sends position/image messages the receiver composites as a Metal overlay — cursor latency stays independent of the video pipeline.
 
 ## Flow Control
 
-Ack-based: iPad sends `frameAck` per frame; Mac tracks in-flight count. When `maxInFlightFrames` (4) exceeded, encoder drops P-frames but always sends keyframes. This prevents congestion without stalling the pipeline.
+Ack-based: receiver (iPad or Mac) sends `frameAck` per frame; host tracks in-flight count per transport. When the window (`maxInFlightFrames: 4` USB, `networkMaxInFlightFrames: 8` TCP) is exceeded, the encoder drops P-frames but always sends keyframes, and forces a keyframe after any drop so the decoder's reference chain recovers. This prevents congestion without stalling the pipeline.
+
+## Gotchas
+
+- CLI builds fail signing while `project.yml` has `YOUR_TEAM_ID_HERE`; append `CODE_SIGNING_ALLOWED=NO` to xcodebuild for build/test checks.
+- `CGVirtualDisplayMode` dimensions are LOGICAL (points); `hiDPI: true` adds a 2× Retina backing. Capture, encoder, and `displayConfig` all use PIXEL dimensions. Mixing the two renders the extended display at the wrong scale.
+- Commit the regenerated `ExternalScreen.xcodeproj` together with any `project.yml` change (run `xcodegen generate` first) — the checked-in project must stay in sync.
+- System cursor images carry oversized accessibility reps; `CursorStreamer` picks the rep matching point size × receiver scale — never "largest rep".
+- NSEvent monitors and run-loop Timers stall while the main thread is in tracking mode (window drags, menus); anything latency-critical polls from a background queue instead.
