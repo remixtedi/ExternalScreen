@@ -9,13 +9,16 @@
 /* Begin PBXBuildFile section */
 		0DC532C97E282094824696B4 /* PTChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 93B37B4D2845F28D4DDFC3EC /* PTChannel.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		12624D830C96886AF5A0BC4D /* PTUSBHub.m in Sources */ = {isa = PBXBuildFile; fileRef = 2446CA09896F968882B6F288 /* PTUSBHub.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		2DECAEAC96E5808228FD59C1 /* FlowControlState.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA41A95628DEF8AB74096BD3 /* FlowControlState.swift */; };
 		40DAE7BA05D798933F9BC489 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D4CFD47B48FA7BB5DBEA8E6 /* Constants.swift */; };
 		4904C4F852BFCB22D30492A5 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 59378F5E8DADD08131015E3F /* UIKit.framework */; };
 		52EAACD4533D6D63C7A12977 /* Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86CA5CF89C19C2F5FA6C3139 /* Protocol.swift */; };
 		56BDC834D182B23EACE6F8C6 /* USBConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C29FC3E8CA0B51711DE0DA38 /* USBConnectionManager.swift */; };
+		5720D4264793F336DFF8BEDE /* MessageDeframer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44ECD2A09194625D41148AC1 /* MessageDeframer.swift */; };
 		59E5112B032038D73AD02252 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7123E40B59B9F4951797F46C /* Metal.framework */; };
 		5D2B3D2E7CB9B8A41C790899 /* PTProtocol.m in Sources */ = {isa = PBXBuildFile; fileRef = D1B7746228DE612737CC77B1 /* PTProtocol.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		5E6ED740862E16EE52E16A3D /* H264Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C3AD6543F719AE380AC0C96 /* H264Decoder.swift */; };
+		6396CF2E6721A592685CC6AC /* FlowControlState.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA41A95628DEF8AB74096BD3 /* FlowControlState.swift */; };
 		65B4059064C64A5BA09F79D6 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0681FE3BFB2571EE3FFD5DE /* AppDelegate.swift */; };
 		67332D896F333D3C30F78936 /* TouchEventHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB2A5D532EA0B7C6C699FB07 /* TouchEventHandler.swift */; };
 		687DE3401F3D9C92C10A083D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ACCEFDDC511068F92542EE99 /* Assets.xcassets */; };
@@ -29,16 +32,21 @@
 		8BE864585A2F9727E5677DE9 /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67CDBB3DD4350FDBA02E9D79 /* MetalRenderer.swift */; };
 		8F6501FE0885C64210559D7C /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3320B2DF39E0847E4793FEB4 /* SceneDelegate.swift */; };
 		94A110D4D1E806426A98E260 /* PTChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 8396764110BEFE60B9C70EE4 /* PTChannel.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		99092695B85AA634411C4368 /* MessageDeframer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44ECD2A09194625D41148AC1 /* MessageDeframer.swift */; };
 		99C33D063DFBF28D7B277EA6 /* PTProtocol.m in Sources */ = {isa = PBXBuildFile; fileRef = 816C01FE9548FB5810D524B5 /* PTProtocol.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		9C336B96264FEF981E4D8C84 /* FlowControlState.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA41A95628DEF8AB74096BD3 /* FlowControlState.swift */; };
 		9D9B9B242E68ED354C1401DC /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D7AAC182BD9CFA419B901DE0 /* AppKit.framework */; };
+		A8A4AD186FD772B152594AD6 /* MessageDeframer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44ECD2A09194625D41148AC1 /* MessageDeframer.swift */; };
 		AB9D9EF78A437712A763BE0B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 28109E0EEE1062DF90E87BB8 /* Assets.xcassets */; };
 		AFE483D4B4ECBE4184ADE655 /* DisplayViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6F9C98DAAD8335B757DF9C0 /* DisplayViewController.swift */; };
 		B98A5FCCDD05B0D448CCD5CE /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A79D1C02BAAEC3C46802D39 /* MetalKit.framework */; };
 		BD12F5D3A9C6E950834D9FF3 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 18C4ED281632D7ED2C2B18C8 /* VideoToolbox.framework */; };
+		C1A4854F134989EBC50B1B96 /* FlowControlStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DA380EEC5417C4707A4DE61 /* FlowControlStateTests.swift */; };
 		C72BBE3E14CB03199E44A181 /* H264Encoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B86D1028E71FDA27E76F7FA /* H264Encoder.swift */; };
 		C825A37A4B9D97178787A411 /* TouchCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49AD430355BE6E6D77C189FC /* TouchCaptureView.swift */; };
 		CB304ED54F06D47EAEB90F2B /* ConnectionWaitingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20E14AFCA7603305073F55D2 /* ConnectionWaitingView.swift */; };
 		CFAB7FF2C8E14EACAD0890BE /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 2088AAA754B57C5166B25852 /* Shaders.metal */; };
+		D20E160A0B3710E4DD197ABA /* MessageDeframerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 773D480D0C0326CBDFB5B0DD /* MessageDeframerTests.swift */; };
 		D7DC270A64BF1E22BCE452BB /* ScreenCaptureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECB3EF61EA0153E2B6DD2A27 /* ScreenCaptureManager.swift */; };
 		DB7971F600A6F2C77CD26160 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89C8F1F533E38259836A0B2C /* AppDelegate.swift */; };
 		DE1C1007419A3D902F93C190 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0D5AD6A0B26DFA057617F36D /* CoreMedia.framework */; };
@@ -62,8 +70,10 @@
 		2446CA09896F968882B6F288 /* PTUSBHub.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTUSBHub.m; sourceTree = "<group>"; };
 		28109E0EEE1062DF90E87BB8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2D4BA93BD543A017CDA14CC3 /* PTUSBHub.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTUSBHub.m; sourceTree = "<group>"; };
+		2DA380EEC5417C4707A4DE61 /* FlowControlStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowControlStateTests.swift; sourceTree = "<group>"; };
 		3320B2DF39E0847E4793FEB4 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		3B8039B63D444EF884CF4D7C /* PTDefines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PTDefines.h; sourceTree = "<group>"; };
+		44ECD2A09194625D41148AC1 /* MessageDeframer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageDeframer.swift; sourceTree = "<group>"; };
 		49AD430355BE6E6D77C189FC /* TouchCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchCaptureView.swift; sourceTree = "<group>"; };
 		49C3F57A019F0E9D59C73F8F /* PTPrivate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PTPrivate.h; sourceTree = "<group>"; };
 		4C873C53F9E6442C1C7A6D73 /* ExternalScreenIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ExternalScreenIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -76,6 +86,7 @@
 		6F6E14471293D63C08E46A28 /* CGVirtualDisplay+Bridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "CGVirtualDisplay+Bridge.h"; sourceTree = "<group>"; };
 		7123E40B59B9F4951797F46C /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		71A9067CEFC96EE46AEFC7BF /* ExternalScreenMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ExternalScreenMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		773D480D0C0326CBDFB5B0DD /* MessageDeframerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageDeframerTests.swift; sourceTree = "<group>"; };
 		816C01FE9548FB5810D524B5 /* PTProtocol.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTProtocol.m; sourceTree = "<group>"; };
 		8396764110BEFE60B9C70EE4 /* PTChannel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PTChannel.m; sourceTree = "<group>"; };
 		86CA5CF89C19C2F5FA6C3139 /* Protocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Protocol.swift; sourceTree = "<group>"; };
@@ -100,6 +111,7 @@
 		D7AAC182BD9CFA419B901DE0 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		DE803364B07300EC556B5F93 /* PTProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PTProtocol.h; sourceTree = "<group>"; };
 		E92B95570CFD541FDA4E0146 /* CGVirtualDisplay+Bridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "CGVirtualDisplay+Bridge.m"; sourceTree = "<group>"; };
+		EA41A95628DEF8AB74096BD3 /* FlowControlState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowControlState.swift; sourceTree = "<group>"; };
 		ECB3EF61EA0153E2B6DD2A27 /* ScreenCaptureManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureManager.swift; sourceTree = "<group>"; };
 		F3CBA94E99200B1D65A0723A /* Peertalk.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Peertalk.h; sourceTree = "<group>"; };
 		F4BAA42FCAE08C4EBF14659D /* USBDeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = USBDeviceManager.swift; sourceTree = "<group>"; };
@@ -198,6 +210,15 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		4425C04E87A1DBA2E5F93924 /* Transport */ = {
+			isa = PBXGroup;
+			children = (
+				EA41A95628DEF8AB74096BD3 /* FlowControlState.swift */,
+				44ECD2A09194625D41148AC1 /* MessageDeframer.swift */,
+			);
+			path = Transport;
+			sourceTree = "<group>";
+		};
 		4D01340778486042781CF883 /* App */ = {
 			isa = PBXGroup;
 			children = (
@@ -231,6 +252,7 @@
 		6697D4EA58CAB12C32DDCB0D /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				4425C04E87A1DBA2E5F93924 /* Transport */,
 				6D4CFD47B48FA7BB5DBEA8E6 /* Constants.swift */,
 				86CA5CF89C19C2F5FA6C3139 /* Protocol.swift */,
 			);
@@ -316,6 +338,8 @@
 		C719EE2DBE4ECB738EB12245 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				2DA380EEC5417C4707A4DE61 /* FlowControlStateTests.swift */,
+				773D480D0C0326CBDFB5B0DD /* MessageDeframerTests.swift */,
 				01701982C703394CF40A11B8 /* ProtocolTests.swift */,
 			);
 			path = Tests;
@@ -493,6 +517,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				40DAE7BA05D798933F9BC489 /* Constants.swift in Sources */,
+				6396CF2E6721A592685CC6AC /* FlowControlState.swift in Sources */,
+				C1A4854F134989EBC50B1B96 /* FlowControlStateTests.swift in Sources */,
+				5720D4264793F336DFF8BEDE /* MessageDeframer.swift in Sources */,
+				D20E160A0B3710E4DD197ABA /* MessageDeframerTests.swift in Sources */,
 				52EAACD4533D6D63C7A12977 /* Protocol.swift in Sources */,
 				F30238006C90BCAECDCB0F3A /* ProtocolTests.swift in Sources */,
 			);
@@ -505,8 +533,10 @@
 				65B4059064C64A5BA09F79D6 /* AppDelegate.swift in Sources */,
 				85255E1A103B00E471DDEE7E /* CGVirtualDisplay+Bridge.m in Sources */,
 				7E4A72798DABDF5FBE6EEBBD /* Constants.swift in Sources */,
+				2DECAEAC96E5808228FD59C1 /* FlowControlState.swift in Sources */,
 				C72BBE3E14CB03199E44A181 /* H264Encoder.swift in Sources */,
 				EF8FB9AF64879C4D7E5643F9 /* MainWindowController.swift in Sources */,
+				A8A4AD186FD772B152594AD6 /* MessageDeframer.swift in Sources */,
 				94A110D4D1E806426A98E260 /* PTChannel.m in Sources */,
 				5D2B3D2E7CB9B8A41C790899 /* PTProtocol.m in Sources */,
 				12624D830C96886AF5A0BC4D /* PTUSBHub.m in Sources */,
@@ -526,7 +556,9 @@
 				CB304ED54F06D47EAEB90F2B /* ConnectionWaitingView.swift in Sources */,
 				FACB940373545F420E083151 /* Constants.swift in Sources */,
 				AFE483D4B4ECBE4184ADE655 /* DisplayViewController.swift in Sources */,
+				9C336B96264FEF981E4D8C84 /* FlowControlState.swift in Sources */,
 				5E6ED740862E16EE52E16A3D /* H264Decoder.swift in Sources */,
+				99092695B85AA634411C4368 /* MessageDeframer.swift in Sources */,
 				8BE864585A2F9727E5677DE9 /* MetalRenderer.swift in Sources */,
 				0DC532C97E282094824696B4 /* PTChannel.m in Sources */,
 				99C33D063DFBF28D7B277EA6 /* PTProtocol.m in Sources */,
