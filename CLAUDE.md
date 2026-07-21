@@ -93,6 +93,7 @@ Message types:
 - **3** frameAck - Flow control acknowledgment
 - **4–7** touch events (began, moved, ended, cancelled) - iPad touch input (host mode only)
 - **8** disconnect - Connection close
+- **9** orientationChange - iPad orientation (landscape/portrait)
 - **10** displayCapabilities - Receiver display info (Mac-to-Mac)
 - **11** cursorPosition - Cursor coordinates (normalized 0.0-1.0)
 - **12** cursorImage - Cursor image bitmap

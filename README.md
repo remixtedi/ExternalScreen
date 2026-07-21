@@ -88,7 +88,7 @@ The Mac app requires Screen Recording permission to capture screen content:
 
 ### Mac Receiver (Local Network)
 
-1. Launch **ExternalScreenMac** on the receiver Mac and select "Receiver mode" from the menu
+1. Launch **ExternalScreenMac** on the receiver Mac and select "Use This Mac as Receiver" from the menu
 2. Launch **ExternalScreenMac** on the host Mac (sender)
 3. The host Mac automatically discovers available receivers via Bonjour
 4. Select the receiver Mac from the menu to connect
@@ -135,7 +135,7 @@ ExternalScreen/
 │   │   ├── USB/               # PeerTalk connection manager
 │   │   └── Touch/             # Touch capture (normalized coords)
 │   └── Vendor/PeerTalk/
-└── Vendor/PeerTalk/           # Original PeerTalk source (submodule)
+└── Vendor/PeerTalk/           # Original PeerTalk source (cloned by setup.sh)
 ```
 
 ## Configuration
