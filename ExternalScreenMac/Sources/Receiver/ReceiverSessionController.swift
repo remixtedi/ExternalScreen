@@ -17,6 +17,7 @@ final class ReceiverSessionController: NSObject {
     private var waitingLabel: NSTextField!
     private var sleepAssertionID: IOPMAssertionID = 0
     private var keyMonitor: Any?
+    private var isStopped = false
 
     func start() throws {
         let screen = NSScreen.main ?? NSScreen.screens[0]
@@ -78,6 +79,9 @@ final class ReceiverSessionController: NSObject {
     }
 
     func stop() {
+        guard !isStopped else { return }
+        isStopped = true
+
         transport?.stop()
         decoder?.stop()
         renderer?.clear()

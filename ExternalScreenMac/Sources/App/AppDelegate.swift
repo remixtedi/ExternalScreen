@@ -262,9 +262,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard receiverSession == nil else { return }
         log("Entering receiver mode")
 
-        // Host and receiver roles are mutually exclusive
-        if isRunning { stopPipeline() }
+        // Host and receiver roles are mutually exclusive. If the host pipeline is
+        // running, await its full teardown (including the virtual display, which this
+        // Mac must not keep attached while acting as a screen) before starting the
+        // receiver session, so the two pipelines never briefly co-exist.
+        guard isRunning else {
+            startReceiverSession()
+            return
+        }
 
+        isRunning = false
+        if #available(macOS 14.0, *) {
+            Task {
+                await stopPipelineTeardown(stopVirtualDisplay: true)
+                await MainActor.run {
+                    self.startReceiverSession()
+                }
+            }
+        } else {
+            h264Encoder.stop()
+            usbDeviceManager.disconnect()
+            receiverBrowser.stop()
+            networkTransport?.disconnect()
+            networkTransport = nil
+            targetKind = .iPad
+            isConnectingToReceiver = false
+            virtualDisplayManager.stop()
+            updateStatusIcon(connected: false)
+            updateStatus("Stopped", state: .idle)
+            startReceiverSession()
+        }
+    }
+
+    private func startReceiverSession() {
         let session = ReceiverSessionController()
         session.onExit = { [weak self] in
             self?.receiverSession = nil
@@ -491,27 +521,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Stop capture and encoding, but keep USB listener active for reconnection
         if #available(macOS 14.0, *) {
             Task {
-                // Wait for screen capture to fully stop first
-                await screenCaptureManager.stopCapture()
-
-                // Then stop encoder on main thread
-                await MainActor.run {
-                    h264Encoder.stop()
-                    // Disconnect USB channel but keep listener active for quick reconnect
-                    usbDeviceManager.disconnect()
-                    // Tear down any Mac receiver session
-                    receiverBrowser.stop()
-                    networkTransport?.disconnect()
-                    networkTransport = nil
-                    targetKind = .iPad
-                    isConnectingToReceiver = false
-                    // Keep virtual display active to preserve position settings
-                    // virtualDisplayManager.stop() - commented out to preserve position
-
-                    updateStatusIcon(connected: false)
-                    updateStatus("Stopped", state: .idle)
-                    print("ExternalScreen Mac: Pipeline stopped (virtual display preserved)")
-                }
+                await stopPipelineTeardown(stopVirtualDisplay: false)
             }
         } else {
             h264Encoder.stop()
@@ -527,6 +537,40 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             updateStatusIcon(connected: false)
             updateStatus("Stopped", state: .idle)
             print("ExternalScreen Mac: Pipeline stopped (virtual display preserved)")
+        }
+    }
+
+    /// Shared awaited teardown used by `stopPipeline()` and receiver-mode entry: waits
+    /// for screen capture to fully stop, then performs the remaining synchronous
+    /// teardown on the main actor.
+    /// - Parameter stopVirtualDisplay: normal `stopPipeline()` preserves the virtual
+    ///   display (keeps its screen arrangement/position); receiver-mode entry must fully
+    ///   stop it, since this Mac is about to act as a screen rather than a host.
+    @available(macOS 14.0, *)
+    private func stopPipelineTeardown(stopVirtualDisplay: Bool) async {
+        // Wait for screen capture to fully stop first
+        await screenCaptureManager.stopCapture()
+
+        // Then stop encoder on main thread
+        await MainActor.run {
+            h264Encoder.stop()
+            // Disconnect USB channel but keep listener active for quick reconnect
+            usbDeviceManager.disconnect()
+            // Tear down any Mac receiver session
+            receiverBrowser.stop()
+            networkTransport?.disconnect()
+            networkTransport = nil
+            targetKind = .iPad
+            isConnectingToReceiver = false
+
+            if stopVirtualDisplay {
+                virtualDisplayManager.stop()
+            }
+            // else: keep virtual display active to preserve position settings
+
+            updateStatusIcon(connected: false)
+            updateStatus("Stopped", state: .idle)
+            print("ExternalScreen Mac: Pipeline stopped\(stopVirtualDisplay ? "" : " (virtual display preserved)")")
         }
     }
 
