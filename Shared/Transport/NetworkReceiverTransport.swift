@@ -105,6 +105,13 @@ public final class NetworkReceiverTransport: FrameTransport {
             switch state {
             case .ready:
                 self.lock.lock()
+                // A stale connection (superseded by a later `accept()` call) must not
+                // flip shared state even on `.ready` — otherwise a slow-to-connect
+                // connection A can "reconnect" after connection B already replaced it.
+                guard conn === self.networkConnection else {
+                    self.lock.unlock()
+                    return
+                }
                 let wasConnected = self.connected
                 self.connected = true
                 self.lock.unlock()
@@ -114,6 +121,13 @@ public final class NetworkReceiverTransport: FrameTransport {
                 }
             case .failed, .cancelled:
                 self.lock.lock()
+                // Same identity guard: a stale connection A's later `.failed`/`.cancelled`
+                // must not clear `networkConnection` (now pointing at B) or fire
+                // transportDidDisconnect for a session that's actually still live.
+                guard conn === self.networkConnection else {
+                    self.lock.unlock()
+                    return
+                }
                 let wasConnected = self.connected
                 self.connected = false
                 self.networkConnection = nil

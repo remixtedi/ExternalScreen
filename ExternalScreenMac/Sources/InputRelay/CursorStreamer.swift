@@ -95,8 +95,20 @@ final class CursorStreamer {
         let cursor = NSCursor.currentSystem ?? NSCursor.current
         let image = cursor.image
 
-        guard let tiff = image.tiffRepresentation,
-              let rep = NSBitmapImageRep(data: tiff),
+        // Prefer the largest bitmap rep (Retina cursors ship 1x/2x/3x reps); picking the
+        // first one — which `NSBitmapImageRep(data: tiffRepresentation)` does — grabs the
+        // 1x rep and renders half-size/blurry on a Retina receiver.
+        let bitmapReps = image.representations.compactMap { $0 as? NSBitmapImageRep }
+        let rep: NSBitmapImageRep?
+        if let largest = bitmapReps.max(by: { $0.pixelsWide < $1.pixelsWide }) {
+            rep = largest
+        } else if let tiff = image.tiffRepresentation {
+            rep = NSBitmapImageRep(data: tiff)
+        } else {
+            rep = nil
+        }
+
+        guard let rep = rep,
               let png = rep.representation(using: .png, properties: [:]) else { return }
 
         guard png != lastImagePNG else { return }

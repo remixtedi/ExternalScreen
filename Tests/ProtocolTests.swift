@@ -59,6 +59,24 @@ final class ProtocolTests: XCTestCase {
         XCTAssertNil(CursorImageMessage.from(data: data))
     }
 
+    func testHandshakeRoundTrip() {
+        let msg = HandshakeMessage(protocolVersion: 2, deviceName: "Giorgi's MacBook Pro")
+        let decoded = HandshakeMessage.from(data: msg.toData())
+        XCTAssertEqual(decoded?.protocolVersion, 2)
+        XCTAssertEqual(decoded?.deviceName, "Giorgi's MacBook Pro")
+    }
+
+    func testHandshakeRoundTripEmptyDeviceName() {
+        let msg = HandshakeMessage(protocolVersion: ExternalScreenConstants.protocolVersion, deviceName: "")
+        let decoded = HandshakeMessage.from(data: msg.toData())
+        XCTAssertEqual(decoded?.protocolVersion, ExternalScreenConstants.protocolVersion)
+        XCTAssertEqual(decoded?.deviceName, "")
+    }
+
+    func testHandshakeRejectsShortData() {
+        XCTAssertNil(HandshakeMessage.from(data: Data([0x01, 0x02])))
+    }
+
     func testExistingMessagesStillRoundTrip() {
         let header = MessageHeader(type: .frameData, timestamp: 123456789, payloadLength: 42)
         let decodedHeader = MessageHeader.from(data: header.toData())

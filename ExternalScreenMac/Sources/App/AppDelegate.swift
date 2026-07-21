@@ -25,15 +25,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var cursorStreamer = CursorStreamer()
 
     // Mac-to-Mac networking
-    private var networkTransport: NetworkHostTransport?
+    /// Guards all reads/writes of `_networkTransport`. `H264Encoder.didEncode` fires on a
+    /// private serial queue and reads `activeTransport` there, while the main thread
+    /// nils/assigns `networkTransport` on connect/disconnect/teardown. Without this lock,
+    /// that's an unsynchronized strong-ref race (use-after-free window on cable unplug
+    /// mid-stream). Never hold this lock while calling into the transport itself — the
+    /// accessors below snapshot the reference, unlock, then return it.
+    private let transportLock = NSLock()
+    private var _networkTransport: NetworkHostTransport?
+    private var networkTransport: NetworkHostTransport? {
+        get {
+            transportLock.lock()
+            defer { transportLock.unlock() }
+            return _networkTransport
+        }
+        set {
+            transportLock.lock()
+            _networkTransport = newValue
+            transportLock.unlock()
+        }
+    }
     private var receiverBrowser: ReceiverBrowser!
     private var discoveredReceivers: [DiscoveredReceiver] = []
     private var receiversMenu: NSMenu!
     private var receiverSession: ReceiverSessionController?
 
     /// The transport currently carrying the stream (PeerTalk for iPad by default).
+    /// Snapshots `_networkTransport` under `transportLock` so callers on the encoder's
+    /// private serial queue never race with main-thread connect/disconnect.
     private var activeTransport: FrameTransport {
-        networkTransport ?? usbDeviceManager
+        transportLock.lock()
+        let transport = _networkTransport
+        transportLock.unlock()
+        return transport ?? usbDeviceManager
     }
 
     private enum TargetKind { case iPad, macReceiver }
@@ -474,6 +498,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func startPipeline() {
+        guard receiverSession == nil else {
+            log("startPipeline: Ignored - receiver mode active")
+            return
+        }
         guard !isRunning else {
             log("startPipeline: Already running")
             return
@@ -885,7 +913,15 @@ extension AppDelegate: FrameTransportDelegate {
         frameNumber = 0
 
         if transport === networkTransport {
-            // Mac receiver: wait for displayCapabilities before configuring anything.
+            // Mac receiver: send handshake first, then wait for displayCapabilities.
+            // Version mismatch is checked when the receiver's handshake reply arrives
+            // (see the `.handshake` case below).
+            log("Transport: Mac receiver connected, sending handshake...")
+            let handshake = HandshakeMessage(
+                protocolVersion: ExternalScreenConstants.protocolVersion,
+                deviceName: Host.current().localizedName ?? "Mac"
+            )
+            transport.sendMessage(type: .handshake, payload: handshake.toData())
             log("Transport: Mac receiver connected, waiting for display capabilities...")
             return
         }
@@ -952,11 +988,6 @@ extension AppDelegate: FrameTransportDelegate {
                 touchEventHandler.handleTouch(type: header.type, touch: touch)
             }
 
-        case .frameAck:
-            if let ack = FrameAckMessage.from(data: payload) {
-                usbDeviceManager.acknowledgeFrame(ack.frameNumber)
-            }
-
         case .orientationChange:
             if let orientationMsg = OrientationMessage.from(data: payload) {
                 handleOrientationChange(orientationMsg.orientation)
@@ -965,6 +996,16 @@ extension AppDelegate: FrameTransportDelegate {
         case .displayCapabilities:
             if let caps = DisplayCapabilitiesMessage.from(data: payload) {
                 handleDisplayCapabilities(caps, from: transport)
+            }
+
+        case .handshake:
+            if let handshake = HandshakeMessage.from(data: payload) {
+                if handshake.protocolVersion != ExternalScreenConstants.protocolVersion {
+                    log("Handshake: version mismatch (receiver=\(handshake.protocolVersion), expected=\(ExternalScreenConstants.protocolVersion)), disconnecting")
+                    transport.disconnect()
+                } else {
+                    log("Handshake: receiver '\(handshake.deviceName)' confirmed protocol v\(handshake.protocolVersion)")
+                }
             }
 
         default:

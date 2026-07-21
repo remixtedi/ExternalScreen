@@ -102,7 +102,12 @@ final class MetalRenderer: NSObject {
         cursorDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .sourceAlpha
         cursorDescriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
         cursorDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
-        self.cursorPipelineState = try? device.makeRenderPipelineState(descriptor: cursorDescriptor)
+        do {
+            self.cursorPipelineState = try device.makeRenderPipelineState(descriptor: cursorDescriptor)
+        } catch {
+            print("MetalRenderer: Failed to create cursor pipeline state: \(error)")
+            self.cursorPipelineState = nil
+        }
 
         super.init()
 

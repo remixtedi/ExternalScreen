@@ -18,6 +18,10 @@ final class ReceiverSessionController: NSObject {
     private var sleepAssertionID: IOPMAssertionID = 0
     private var keyMonitor: Any?
     private var isStopped = false
+    /// Set once the host's handshake has been validated (protocol version match) and our
+    /// reply sent. Guards against acting on frameData/cursor messages that might arrive
+    /// before the handshake completes.
+    private var didHandshake = false
 
     func start() throws {
         let screen = NSScreen.main ?? NSScreen.screens[0]
@@ -137,15 +141,16 @@ private final class KeyableWindow: NSWindow {
 extension ReceiverSessionController: FrameTransportDelegate {
 
     func transportDidConnect(_ transport: FrameTransport, endpointName: String) {
-        print("ReceiverSessionController: host connected")
-        DispatchQueue.main.async { [weak self] in
-            self?.waitingLabel.isHidden = true
-        }
-        sendCapabilities()
+        print("ReceiverSessionController: host connected, awaiting handshake")
+        // Do NOT send capabilities or hide the waiting label yet — that now happens only
+        // after a successful `.handshake` exchange (see `transport(_:didReceive:)`), so a
+        // version-mismatched host never gets treated as a valid session.
+        didHandshake = false
     }
 
     func transportDidDisconnect(_ transport: FrameTransport) {
         print("ReceiverSessionController: host disconnected")
+        didHandshake = false
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.waitingLabel.isHidden = false
@@ -160,6 +165,29 @@ extension ReceiverSessionController: FrameTransportDelegate {
         let payload = data.subdata(in: MessageHeader.size..<data.count)
 
         switch header.type {
+        case .handshake:
+            guard let handshake = HandshakeMessage.from(data: payload) else { return }
+            guard handshake.protocolVersion == ExternalScreenConstants.protocolVersion else {
+                print("ReceiverSessionController: handshake version mismatch (host=\(handshake.protocolVersion), expected=\(ExternalScreenConstants.protocolVersion)), disconnecting")
+                transport.disconnect()
+                return
+            }
+            print("ReceiverSessionController: handshake ok with host '\(handshake.deviceName)' (v\(handshake.protocolVersion))")
+            let reply = HandshakeMessage(
+                protocolVersion: ExternalScreenConstants.protocolVersion,
+                deviceName: Host.current().localizedName ?? "Mac"
+            )
+            transport.sendMessage(type: .handshake, payload: reply.toData())
+            didHandshake = true
+            // `didReceive` runs on the transport's background queue (unlike
+            // `transportDidConnect`, which NetworkReceiverTransport dispatches to main) —
+            // hop to main before touching the waiting label or NSScreen in sendCapabilities().
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.waitingLabel.isHidden = true
+                self.sendCapabilities()
+            }
+
         case .displayConfig:
             if let config = DisplayConfigMessage.from(data: payload) {
                 print("ReceiverSessionController: display config \(config.width)x\(config.height) @\(config.refreshRate)")
@@ -168,6 +196,7 @@ extension ReceiverSessionController: FrameTransportDelegate {
             }
 
         case .frameData:
+            guard didHandshake else { return }
             guard payload.count >= FrameDataHeader.size,
                   let frameHeader = FrameDataHeader.from(data: payload) else { return }
             let frameData = payload.subdata(in: FrameDataHeader.size..<payload.count)
@@ -179,11 +208,13 @@ extension ReceiverSessionController: FrameTransportDelegate {
             transport.sendMessage(type: .frameAck, payload: ack.toData())
 
         case .cursorPosition:
+            guard didHandshake else { return }
             if let pos = CursorPositionMessage.from(data: payload) {
                 renderer?.setCursorPosition(x: pos.x, y: pos.y, visible: pos.visible)
             }
 
         case .cursorImage:
+            guard didHandshake else { return }
             if let img = CursorImageMessage.from(data: payload) {
                 renderer?.setCursorImage(pngData: img.pngData, hotspotX: img.hotspotX, hotspotY: img.hotspotY)
             }
