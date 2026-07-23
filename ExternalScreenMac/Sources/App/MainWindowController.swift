@@ -16,15 +16,23 @@ enum ConnectionState {
 
 /// Main window for the macOS app
 class MainWindow: NSWindow {
-    private var resolutionPicker: NSPopUpButton!
     private var statusLabel: NSTextField!
     private var statusDot: NSView!
     private var resolutionLabel: NSTextField!
-    private var toggleButton: NSButton!
+
+    private var ipadButton: NSButton!
+    private var ipadSubtitle: NSTextField!
+    private var macListStack: NSStackView!
+
+    private var resolutionPicker: NSPopUpButton!
+    private var receiverCheckbox: NSButton!
+
+    private var currentState: ConnectionState = .idle
+    private var receiverNames: [String] = []
 
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 420),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 440),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -34,11 +42,12 @@ class MainWindow: NSWindow {
         self.titlebarAppearsTransparent = true
         self.titleVisibility = .hidden
         self.isMovableByWindowBackground = true
-        self.minSize = NSSize(width: 420, height: 380)
+        self.minSize = NSSize(width: 420, height: 400)
         self.center()
         self.isReleasedWhenClosed = false
 
         setupContent()
+        renderDevices()
     }
 
     private func setupContent() {
@@ -64,6 +73,12 @@ class MainWindow: NSWindow {
             mainStack.bottomAnchor.constraint(equalTo: visualEffect.bottomAnchor),
         ])
 
+        // Pins an arranged subview to the stack's full content width (insets excluded).
+        func addFullWidth(_ view: NSView) {
+            mainStack.addArrangedSubview(view)
+            view.widthAnchor.constraint(equalTo: mainStack.widthAnchor, constant: -48).isActive = true
+        }
+
         // Header
         let headerStack = NSStackView()
         headerStack.orientation = .horizontal
@@ -86,7 +101,7 @@ class MainWindow: NSWindow {
 
         headerStack.addArrangedSubview(headerIcon)
         headerStack.addArrangedSubview(headerLabel)
-        mainStack.addArrangedSubview(headerStack)
+        addFullWidth(headerStack)
 
         // Status card
         let statusCard = makeCard()
@@ -128,30 +143,81 @@ class MainWindow: NSWindow {
         statusCardStack.addArrangedSubview(statusDot)
         statusCardStack.addArrangedSubview(statusLabel)
         statusCardStack.addArrangedSubview(resolutionLabel)
-        mainStack.addArrangedSubview(statusCard)
+        addFullWidth(statusCard)
 
-        // Controls card
-        let controlsCard = makeCard()
-        let controlsStack = NSStackView()
-        controlsStack.orientation = .vertical
-        controlsStack.spacing = 12
-        controlsStack.translatesAutoresizingMaskIntoConstraints = false
-        controlsCard.addSubview(controlsStack)
+        // Displays card: iPad row + discovered Mac receivers
+        let displaysCard = makeCard()
+        let displaysStack = NSStackView()
+        displaysStack.orientation = .vertical
+        displaysStack.spacing = 12
+        displaysStack.alignment = .leading
+        displaysStack.translatesAutoresizingMaskIntoConstraints = false
+        displaysCard.addSubview(displaysStack)
 
         NSLayoutConstraint.activate([
-            controlsStack.topAnchor.constraint(equalTo: controlsCard.topAnchor, constant: 16),
-            controlsStack.bottomAnchor.constraint(equalTo: controlsCard.bottomAnchor, constant: -16),
-            controlsStack.leadingAnchor.constraint(equalTo: controlsCard.leadingAnchor, constant: 16),
-            controlsStack.trailingAnchor.constraint(equalTo: controlsCard.trailingAnchor, constant: -16),
+            displaysStack.topAnchor.constraint(equalTo: displaysCard.topAnchor, constant: 16),
+            displaysStack.bottomAnchor.constraint(equalTo: displaysCard.bottomAnchor, constant: -16),
+            displaysStack.leadingAnchor.constraint(equalTo: displaysCard.leadingAnchor, constant: 16),
+            displaysStack.trailingAnchor.constraint(equalTo: displaysCard.trailingAnchor, constant: -16),
         ])
 
-        // Resolution picker row
+        let displaysHeader = NSTextField(labelWithString: "DISPLAYS")
+        displaysHeader.font = NSFont.systemFont(ofSize: 11, weight: .semibold)
+        displaysHeader.textColor = .secondaryLabelColor
+        displaysStack.addArrangedSubview(displaysHeader)
+
+        // iPad row (persistent)
+        ipadButton = NSButton(title: "Start", target: self, action: #selector(togglePipeline))
+        ipadButton.bezelStyle = .rounded
+        ipadButton.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
+
+        let (ipadRow, _, ipadSub) = makeDeviceRow(
+            symbol: "ipad",
+            title: "iPad (USB)",
+            subtitle: "Connect cable, open External Screen on iPad",
+            button: ipadButton
+        )
+        ipadSubtitle = ipadSub
+        displaysStack.addArrangedSubview(ipadRow)
+        ipadRow.widthAnchor.constraint(equalTo: displaysStack.widthAnchor).isActive = true
+
+        let separator = NSBox()
+        separator.boxType = .separator
+        displaysStack.addArrangedSubview(separator)
+        separator.widthAnchor.constraint(equalTo: displaysStack.widthAnchor).isActive = true
+
+        // Mac receiver rows (rebuilt on discovery/state changes)
+        macListStack = NSStackView()
+        macListStack.orientation = .vertical
+        macListStack.spacing = 10
+        macListStack.alignment = .leading
+        displaysStack.addArrangedSubview(macListStack)
+        macListStack.widthAnchor.constraint(equalTo: displaysStack.widthAnchor).isActive = true
+
+        addFullWidth(displaysCard)
+
+        // Settings card: resolution picker (iPad only) + receiver toggle
+        let settingsCard = makeCard(alpha: 0.5)
+        let settingsStack = NSStackView()
+        settingsStack.orientation = .vertical
+        settingsStack.spacing = 10
+        settingsStack.alignment = .leading
+        settingsStack.translatesAutoresizingMaskIntoConstraints = false
+        settingsCard.addSubview(settingsStack)
+
+        NSLayoutConstraint.activate([
+            settingsStack.topAnchor.constraint(equalTo: settingsCard.topAnchor, constant: 16),
+            settingsStack.bottomAnchor.constraint(equalTo: settingsCard.bottomAnchor, constant: -16),
+            settingsStack.leadingAnchor.constraint(equalTo: settingsCard.leadingAnchor, constant: 16),
+            settingsStack.trailingAnchor.constraint(equalTo: settingsCard.trailingAnchor, constant: -16),
+        ])
+
         let resRow = NSStackView()
         resRow.orientation = .horizontal
         resRow.spacing = 8
         resRow.alignment = .centerY
 
-        let resLabel = NSTextField(labelWithString: "Resolution:")
+        let resLabel = NSTextField(labelWithString: "iPad Resolution:")
         resLabel.font = NSFont.systemFont(ofSize: 13)
         resLabel.setContentHuggingPriority(.required, for: .horizontal)
 
@@ -169,70 +235,19 @@ class MainWindow: NSWindow {
 
         resRow.addArrangedSubview(resLabel)
         resRow.addArrangedSubview(resolutionPicker)
-        controlsStack.addArrangedSubview(resRow)
+        settingsStack.addArrangedSubview(resRow)
 
-        // Toggle button
-        toggleButton = NSButton(title: "Start", target: self, action: #selector(togglePipeline))
-        toggleButton.bezelStyle = .rounded
-        toggleButton.bezelColor = .systemGreen
-        toggleButton.contentTintColor = .white
-        toggleButton.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
-        toggleButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 200).isActive = true
-        controlsStack.addArrangedSubview(toggleButton)
+        receiverCheckbox = NSButton(
+            checkboxWithTitle: "Allow using this Mac as a display",
+            target: self,
+            action: #selector(receiverCheckboxToggled(_:))
+        )
+        receiverCheckbox.font = NSFont.systemFont(ofSize: 12)
+        let enabled = (NSApp.delegate as? AppDelegate)?.isReceiverEnabled ?? true
+        receiverCheckbox.state = enabled ? .on : .off
+        settingsStack.addArrangedSubview(receiverCheckbox)
 
-        mainStack.addArrangedSubview(controlsCard)
-
-        // Instructions card
-        let instructionsCard = makeCard(alpha: 0.5)
-        let instructionsStack = NSStackView()
-        instructionsStack.orientation = .vertical
-        instructionsStack.spacing = 10
-        instructionsStack.translatesAutoresizingMaskIntoConstraints = false
-        instructionsCard.addSubview(instructionsStack)
-
-        NSLayoutConstraint.activate([
-            instructionsStack.topAnchor.constraint(equalTo: instructionsCard.topAnchor, constant: 16),
-            instructionsStack.bottomAnchor.constraint(equalTo: instructionsCard.bottomAnchor, constant: -16),
-            instructionsStack.leadingAnchor.constraint(equalTo: instructionsCard.leadingAnchor, constant: 16),
-            instructionsStack.trailingAnchor.constraint(equalTo: instructionsCard.trailingAnchor, constant: -16),
-        ])
-
-        let howToLabel = NSTextField(labelWithString: "HOW TO USE")
-        howToLabel.font = NSFont.systemFont(ofSize: 11, weight: .semibold)
-        howToLabel.textColor = .secondaryLabelColor
-        instructionsStack.addArrangedSubview(howToLabel)
-
-        let steps: [(String, String)] = [
-            ("cable.connector", "Connect your iPad via USB cable"),
-            ("ipad", "Open External Screen on your iPad"),
-            ("play.fill", "Click Start to begin streaming"),
-        ]
-
-        for (symbolName, text) in steps {
-            let row = NSStackView()
-            row.orientation = .horizontal
-            row.spacing = 8
-            row.alignment = .centerY
-
-            let icon = NSImageView()
-            if let img = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil) {
-                let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
-                icon.image = img.withSymbolConfiguration(config)
-                icon.contentTintColor = .secondaryLabelColor
-            }
-            icon.setContentHuggingPriority(.required, for: .horizontal)
-            icon.widthAnchor.constraint(equalToConstant: 20).isActive = true
-
-            let label = NSTextField(labelWithString: text)
-            label.font = NSFont.systemFont(ofSize: 12)
-            label.textColor = .secondaryLabelColor
-
-            row.addArrangedSubview(icon)
-            row.addArrangedSubview(label)
-            instructionsStack.addArrangedSubview(row)
-        }
-
-        mainStack.addArrangedSubview(instructionsCard)
+        addFullWidth(settingsCard)
 
         // Flexible spacer
         let spacer = NSView()
@@ -256,7 +271,7 @@ class MainWindow: NSWindow {
 
         footerStack.addArrangedSubview(infoLabel)
         footerStack.addArrangedSubview(githubBtn)
-        mainStack.addArrangedSubview(footerStack)
+        addFullWidth(footerStack)
     }
 
     private func makeCard(alpha: CGFloat = 1.0) -> NSView {
@@ -267,6 +282,134 @@ class MainWindow: NSWindow {
         return card
     }
 
+    /// Builds a device row: icon, title over subtitle, trailing action button.
+    private func makeDeviceRow(symbol: String, title: String, subtitle: String, button: NSButton) -> (NSStackView, NSTextField, NSTextField) {
+        let row = NSStackView()
+        row.orientation = .horizontal
+        row.spacing = 10
+        row.alignment = .centerY
+
+        let icon = NSImageView()
+        if let img = NSImage(systemSymbolName: symbol, accessibilityDescription: title) {
+            let config = NSImage.SymbolConfiguration(pointSize: 20, weight: .regular)
+            icon.image = img.withSymbolConfiguration(config)
+            icon.contentTintColor = .secondaryLabelColor
+        }
+        icon.setContentHuggingPriority(.required, for: .horizontal)
+        icon.widthAnchor.constraint(equalToConstant: 28).isActive = true
+
+        let textStack = NSStackView()
+        textStack.orientation = .vertical
+        textStack.spacing = 2
+        textStack.alignment = .leading
+
+        let titleLabel = NSTextField(labelWithString: title)
+        titleLabel.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+
+        let subtitleLabel = NSTextField(labelWithString: subtitle)
+        subtitleLabel.font = NSFont.systemFont(ofSize: 11)
+        subtitleLabel.textColor = .secondaryLabelColor
+
+        textStack.addArrangedSubview(titleLabel)
+        textStack.addArrangedSubview(subtitleLabel)
+        textStack.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
+        button.setContentHuggingPriority(.required, for: .horizontal)
+
+        row.addArrangedSubview(icon)
+        row.addArrangedSubview(textStack)
+        row.addArrangedSubview(button)
+        return (row, titleLabel, subtitleLabel)
+    }
+
+    // MARK: - Rendering
+
+    /// Re-renders the device list from current state: iPad row button/subtitle,
+    /// one row per discovered Mac receiver, and settings enablement.
+    private func renderDevices() {
+        let appDelegate = NSApp.delegate as? AppDelegate
+        let connectedMac = appDelegate?.connectedReceiverName
+
+        // iPad row
+        if connectedMac != nil {
+            ipadButton.isEnabled = false
+            ipadButton.title = "Start"
+            ipadButton.bezelColor = nil
+            ipadButton.contentTintColor = nil
+            ipadSubtitle.stringValue = "Unavailable during a Mac session"
+        } else {
+            ipadButton.isEnabled = true
+            ipadButton.contentTintColor = .white
+            switch currentState {
+            case .idle, .error:
+                ipadButton.title = "Start"
+                ipadButton.bezelColor = .systemGreen
+                ipadSubtitle.stringValue = "Connect cable, open External Screen on iPad"
+            case .waiting:
+                ipadButton.title = "Stop"
+                ipadButton.bezelColor = .systemRed
+                ipadSubtitle.stringValue = "Waiting for iPad…"
+            case .connected:
+                ipadButton.title = "Stop"
+                ipadButton.bezelColor = .systemRed
+                ipadSubtitle.stringValue = "Streaming"
+            }
+        }
+
+        // Resolution presets only apply to the iPad; Mac receivers use native scale
+        resolutionPicker.isEnabled = (connectedMac == nil)
+
+        // Mac receiver rows
+        macListStack.arrangedSubviews.forEach { view in
+            macListStack.removeArrangedSubview(view)
+            view.removeFromSuperview()
+        }
+
+        if receiverNames.isEmpty {
+            let empty = NSTextField(labelWithString: "No Macs found nearby")
+            empty.font = NSFont.systemFont(ofSize: 12)
+            empty.textColor = .tertiaryLabelColor
+            macListStack.addArrangedSubview(empty)
+            return
+        }
+
+        let ipadStreaming = (connectedMac == nil && currentState == .connected)
+        for name in receiverNames {
+            let isConnectedRow = (name == connectedMac)
+
+            let button = NSButton(
+                title: isConnectedRow ? "Disconnect" : "Connect",
+                target: self,
+                action: #selector(macButtonClicked(_:))
+            )
+            button.bezelStyle = .rounded
+            button.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
+            // Identify by name, not index: a queued click on a stale button must not
+            // resolve to a different Mac after the discovered list reorders.
+            button.identifier = NSUserInterfaceItemIdentifier(name)
+            // Streaming to the iPad or to another Mac blocks new Mac connections
+            button.isEnabled = isConnectedRow || (!ipadStreaming && connectedMac == nil)
+
+            let subtitle: String
+            if isConnectedRow {
+                subtitle = currentState == .connected ? "Connected — native resolution" : "Connecting…"
+            } else {
+                subtitle = "Available"
+            }
+
+            let (row, _, _) = makeDeviceRow(
+                symbol: "laptopcomputer",
+                title: name,
+                subtitle: subtitle,
+                button: button
+            )
+            macListStack.addArrangedSubview(row)
+            row.widthAnchor.constraint(equalTo: macListStack.widthAnchor).isActive = true
+        }
+    }
+
+    // MARK: - Actions
+
     @objc private func openGitHub() {
         if let url = URL(string: "https://github.com/remixtedi/ExternalScreen") {
             NSWorkspace.shared.open(url)
@@ -276,6 +419,21 @@ class MainWindow: NSWindow {
     @objc private func togglePipeline() {
         guard let appDelegate = NSApp.delegate as? AppDelegate else { return }
         appDelegate.togglePipeline()
+    }
+
+    @objc private func macButtonClicked(_ sender: NSButton) {
+        guard let appDelegate = NSApp.delegate as? AppDelegate else { return }
+        guard let name = sender.identifier?.rawValue, !name.isEmpty else { return }
+
+        if name == appDelegate.connectedReceiverName {
+            appDelegate.disconnectFromMacReceiver()
+        } else {
+            appDelegate.connectToReceiver(named: name)
+        }
+    }
+
+    @objc private func receiverCheckboxToggled(_ sender: NSButton) {
+        (NSApp.delegate as? AppDelegate)?.setReceiverEnabled(sender.state == .on)
     }
 
     @objc private func resolutionChanged(_ sender: NSPopUpButton) {
@@ -291,13 +449,19 @@ class MainWindow: NSWindow {
         }
     }
 
+    // MARK: - State Updates
+
     func updateStatus(_ status: String, state: ConnectionState) {
+        currentState = state
         statusLabel?.stringValue = status
         statusDot?.layer?.backgroundColor = state.dotColor.cgColor
 
-        // Update resolution label when connected
-        if state == .connected {
-            if let appDelegate = NSApp.delegate as? AppDelegate {
+        // Update resolution label when connected (iPad only; Mac receivers run native)
+        let appDelegate = NSApp.delegate as? AppDelegate
+        if state == .connected, let appDelegate {
+            if appDelegate.connectedReceiverName != nil {
+                resolutionLabel?.stringValue = "Native"
+            } else {
                 let preset = appDelegate.currentDisplayPreset
                 resolutionLabel?.stringValue = "\(preset.width)x\(preset.height)"
             }
@@ -305,17 +469,7 @@ class MainWindow: NSWindow {
             resolutionLabel?.stringValue = ""
         }
 
-        // Update toggle button based on state
-        switch state {
-        case .idle, .error:
-            toggleButton?.title = "Start"
-            toggleButton?.bezelColor = .systemGreen
-            toggleButton?.contentTintColor = .white
-        case .waiting, .connected:
-            toggleButton?.title = "Stop"
-            toggleButton?.bezelColor = .systemRed
-            toggleButton?.contentTintColor = .white
-        }
+        renderDevices()
     }
 
     func updateStatus(_ status: String) {
@@ -324,7 +478,7 @@ class MainWindow: NSWindow {
         let lower = status.lowercased()
         if lower.contains("connected") || lower.contains("streaming") {
             state = .connected
-        } else if lower.contains("waiting") || lower.contains("starting") {
+        } else if lower.contains("waiting") || lower.contains("starting") || lower.contains("connecting") {
             state = .waiting
         } else if lower.contains("failed") || lower.contains("error") {
             state = .error
@@ -332,6 +486,15 @@ class MainWindow: NSWindow {
             state = .idle
         }
         updateStatus(status, state: state)
+    }
+
+    func updateReceivers(_ names: [String]) {
+        receiverNames = names
+        renderDevices()
+    }
+
+    func updateReceiverEnabled(_ enabled: Bool) {
+        receiverCheckbox?.state = enabled ? .on : .off
     }
 
     func updateSelectedPreset(_ preset: DisplayPreset) {
