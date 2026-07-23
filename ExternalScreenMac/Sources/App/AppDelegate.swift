@@ -64,6 +64,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var targetKind: TargetKind = .iPad
     /// Guards against re-entrant `connectToReceiver` calls (e.g. a double-click on the menu item).
     private var isConnectingToReceiver = false
+    /// Bonjour name of the Mac receiver we're connecting/connected to; nil when the
+    /// target is the iPad. Read by MainWindow to render the device list.
+    private(set) var connectedReceiverName: String?
+    private var allowReceiverItem: NSMenuItem?
 
     /// UserDefaults key controlling whether receiver standby auto-starts (default: on).
     private static let receiverEnabledKey = "receiverEnabled"
@@ -183,6 +187,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         allowReceiverItem.target = self
         allowReceiverItem.state = UserDefaults.standard.bool(forKey: Self.receiverEnabledKey) ? .on : .off
         menu.addItem(allowReceiverItem)
+        self.allowReceiverItem = allowReceiverItem
 
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Show Window", action: #selector(showMainWindow), keyEquivalent: "w"))
@@ -246,14 +251,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func connectToReceiver(_ sender: NSMenuItem) {
-        guard sender.tag >= 0 && sender.tag < discoveredReceivers.count else { return }
+        connectToReceiver(at: sender.tag)
+    }
+
+    /// Connect by Bonjour name (used by the main window; a name lookup avoids index
+    /// races when the discovered list changes between render and click).
+    func connectToReceiver(named name: String) {
+        guard let index = discoveredReceivers.firstIndex(where: { $0.name == name }) else {
+            log("connectToReceiver(named:): '\(name)' no longer discovered")
+            return
+        }
+        connectToReceiver(at: index)
+    }
+
+    func connectToReceiver(at index: Int) {
+        guard index >= 0 && index < discoveredReceivers.count else { return }
         guard !isConnectingToReceiver else {
             log("connectToReceiver: Already connecting, ignoring duplicate request")
             return
         }
         isConnectingToReceiver = true
 
-        let receiver = discoveredReceivers[sender.tag]
+        let receiver = discoveredReceivers[index]
         log("Connecting to Mac receiver: \(receiver.name)")
 
         // Tear down any current network session
@@ -261,6 +280,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         func beginConnection() {
             targetKind = .macReceiver
+            connectedReceiverName = receiver.name
             let transport = NetworkHostTransport(endpoint: receiver.endpoint, name: receiver.name)
             transport.transportDelegate = self
             networkTransport = transport
@@ -270,6 +290,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             transport.start()
             isConnectingToReceiver = false
+            updateStatus("Connecting to \(receiver.name)…", state: .waiting)
         }
 
         // An iPad session must not run concurrently with a Mac receiver session.
@@ -295,19 +316,36 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// "Allow Using as Display" checkbox: flips the persisted pref and starts/stops
-    /// receiver standby to match.
+    /// "Allow Using as Display" menu checkbox: routes through the shared toggle.
     @objc private func toggleReceiverEnabled(_ sender: NSMenuItem) {
-        let newValue = sender.state != .on
-        UserDefaults.standard.set(newValue, forKey: Self.receiverEnabledKey)
-        sender.state = newValue ? .on : .off
-        log("toggleReceiverEnabled: \(newValue ? "enabled" : "disabled")")
+        setReceiverEnabled(sender.state != .on)
+    }
 
-        if newValue {
+    /// Whether receiver standby is enabled (backs the menu checkbox and window checkbox).
+    var isReceiverEnabled: Bool {
+        UserDefaults.standard.bool(forKey: Self.receiverEnabledKey)
+    }
+
+    /// Flips the persisted pref, keeps the menu item and window checkbox in sync,
+    /// and starts/stops receiver standby to match. Called from both UIs.
+    func setReceiverEnabled(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: Self.receiverEnabledKey)
+        allowReceiverItem?.state = enabled ? .on : .off
+        (mainWindowController?.window as? MainWindow)?.updateReceiverEnabled(enabled)
+        log("setReceiverEnabled: \(enabled ? "enabled" : "disabled")")
+
+        if enabled {
             startReceiverStandby()
         } else {
             stopReceiverStandby()
         }
+    }
+
+    /// Ends the current Mac receiver session (window "Disconnect" button).
+    func disconnectFromMacReceiver() {
+        guard targetKind == .macReceiver else { return }
+        log("disconnectFromMacReceiver: Stopping Mac receiver session")
+        stopPipeline()
     }
 
     /// Starts the long-lived receiver service in standby (listening + advertising, no
@@ -434,6 +472,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // this Mac's receiver standby is also advertising via Bonjour.
             self?.discoveredReceivers = receivers.filter { $0.name != localName }
             self?.rebuildReceiversMenu()
+            self?.pushReceiversToWindow()
         }
         receiverBrowser.start()
     }
@@ -461,6 +500,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             mainWindowController = MainWindowController()
         }
         mainWindowController?.show()
+        // Sync window state that may have changed while the window didn't exist
+        pushReceiversToWindow()
+        (mainWindowController?.window as? MainWindow)?.updateReceiverEnabled(isReceiverEnabled)
+    }
+
+    /// Mirrors the discovered receiver list into the main window's device list.
+    private func pushReceiversToWindow() {
+        let names = discoveredReceivers.map { $0.name }
+        (mainWindowController?.window as? MainWindow)?.updateReceivers(names)
     }
 
     /// Called by MainWindow toggle button
@@ -544,6 +592,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         updateStatusIcon(connected: usbDeviceManager.connected)
         if usbDeviceManager.connected {
             updateStatus("Connected - Streaming", state: .connected)
+        } else if targetKind == .macReceiver {
+            updateStatus("Connecting to \(connectedReceiverName ?? "Mac")…", state: .waiting)
         } else {
             updateStatus("Waiting for iPad...", state: .waiting)
         }
@@ -570,6 +620,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             networkTransport?.disconnect()
             networkTransport = nil
             targetKind = .iPad
+            connectedReceiverName = nil
             isConnectingToReceiver = false
             cursorStreamer.stop()
             // Keep virtual display active to preserve position settings
@@ -597,6 +648,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             networkTransport?.disconnect()
             networkTransport = nil
             targetKind = .iPad
+            connectedReceiverName = nil
             isConnectingToReceiver = false
             cursorStreamer.stop()
             // Keep virtual display active to preserve position settings
@@ -715,6 +767,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         // permanently locked out by the transportDidConnect mutual-exclusion guard.
                         networkTransport = nil
                         targetKind = .iPad
+                        connectedReceiverName = nil
                         reinitializeComponentsWithCurrentPreset()
                         if !virtualDisplayManager.isActive {
                             virtualDisplayManager.start()
@@ -954,6 +1007,7 @@ extension AppDelegate: FrameTransportDelegate {
         if wasMacReceiver {
             networkTransport = nil
             targetKind = .iPad
+            connectedReceiverName = nil
             isConnectingToReceiver = false
             cursorStreamer.stop()
         }
