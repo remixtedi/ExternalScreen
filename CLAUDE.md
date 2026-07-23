@@ -96,7 +96,7 @@ Messages use a binary format: 4-byte type + 8-byte timestamp + 4-byte payload le
 
 Message types:
 - **0** handshake - Initial connection
-- **1** displayConfig - Display resolution & metadata
+- **1** displayConfig - Display resolution & metadata (+ render rotation, v3)
 - **2** frameData - H.264 compressed frame
 - **3** frameAck - Flow control acknowledgment
 - **4–7** touch events (began, moved, ended, cancelled) - iPad touch input (host mode only)
@@ -113,6 +113,8 @@ Touch coordinates are normalized 0.0-1.0 relative to display bounds.
 ## Mac-to-Mac Mode
 
 Connection sequence: host connects over TCP → host sends `handshake` (protocol version) → receiver validates version (mismatch → logged disconnect), replies with its own `handshake` + `displayCapabilities` (native pixel size + scale) → host recreates the virtual display at the receiver's logical size with Retina backing, then sends `displayConfig` and starts streaming. The receiver ignores frame/cursor messages until the handshake completes. Cursor streaming is decoupled from video: the host polls the cursor at 120 Hz off the main thread and sends position/image messages the receiver composites as a Metal overlay — cursor latency stays independent of the video pipeline.
+
+**Rotation** (host status-bar menu → Rotation, Mac receiver sessions only): macOS cannot rotate a virtual display — `CGVirtualDisplaySettings.rotation` exists but WindowServer ignores it, and System Settings never shows a rotation dropdown for virtual displays. Rotation is therefore implemented in the render path: for 90°/270° the host creates the virtual display with swapped (portrait) dimensions and streams that, `displayConfig` carries the rotation, and the receiver's `MetalRenderer` rotates the decoded frames (and the cursor overlay, which is positioned in stream space) back onto its landscape panel. Changing rotation mid-session re-runs the `displayCapabilities`-driven reconfiguration. Persisted in `UserDefaults` key `displayRotation`; iPad sessions ignore it (iPad handles orientation itself via `orientationChange`).
 
 ## Flow Control
 

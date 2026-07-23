@@ -197,6 +197,8 @@ final class ReceiverSessionController: NSObject {
         oldDecoder?.stop()
         currentRenderer?.clear()
         currentRenderer?.clearCursor()
+        // The new host sends its own displayConfig; don't inherit the old host's rotation.
+        currentRenderer?.setRotation(0)
 
         print("ReceiverSessionController: new host superseded active session, reset decoder/renderer")
     }
@@ -305,9 +307,10 @@ extension ReceiverSessionController: FrameTransportDelegate {
             let session = snapshotSession()
             guard session.didHandshake else { return }
             if let config = DisplayConfigMessage.from(data: payload) {
-                print("ReceiverSessionController: display config \(config.width)x\(config.height) @\(config.refreshRate)")
+                print("ReceiverSessionController: display config \(config.width)x\(config.height) @\(config.refreshRate) rotation=\(config.rotation)°")
                 session.decoder?.reset()
                 session.decoder?.setFrameRate(Int(config.refreshRate))
+                session.renderer?.setRotation(Int(config.rotation))
             }
 
         case .frameData:

@@ -118,32 +118,44 @@ public struct DisplayConfigMessage {
     public let width: UInt32
     public let height: UInt32
     public let refreshRate: Float
+    /// Clockwise rotation in degrees (0/90/180/270) the receiver applies when rendering.
+    /// The stream's width/height above are already the rotated (e.g. portrait) dimensions;
+    /// the receiver rotates the decoded frames back onto its physical panel.
+    public let rotation: UInt32
 
-    public init(width: UInt32, height: UInt32, refreshRate: Float) {
+    public init(width: UInt32, height: UInt32, refreshRate: Float, rotation: UInt32 = 0) {
         self.width = width
         self.height = height
         self.refreshRate = refreshRate
+        self.rotation = rotation
     }
 
-    public static let size = 12  // 4 + 4 + 4 bytes
+    public static let size = 16  // 4 + 4 + 4 + 4 bytes
 
     public func toData() -> Data {
         var data = Data(capacity: DisplayConfigMessage.size)
         var w = width
         var h = height
         var r = refreshRate
+        var rot = rotation
         data.append(Data(bytes: &w, count: 4))
         data.append(Data(bytes: &h, count: 4))
         data.append(Data(bytes: &r, count: 4))
+        data.append(Data(bytes: &rot, count: 4))
         return data
     }
 
     public static func from(data: Data) -> DisplayConfigMessage? {
-        guard data.count >= DisplayConfigMessage.size else { return nil }
+        // Accept the legacy 12-byte layout (no rotation field) so a pre-rotation
+        // host can still drive a newer receiver; rotation defaults to 0.
+        guard data.count >= 12 else { return nil }
         let width = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 0, as: UInt32.self) }
         let height = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 4, as: UInt32.self) }
         let refreshRate = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 8, as: Float.self) }
-        return DisplayConfigMessage(width: width, height: height, refreshRate: refreshRate)
+        let rotation: UInt32 = data.count >= DisplayConfigMessage.size
+            ? data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 12, as: UInt32.self) }
+            : 0
+        return DisplayConfigMessage(width: width, height: height, refreshRate: refreshRate, rotation: rotation)
     }
 }
 

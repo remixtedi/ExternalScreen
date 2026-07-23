@@ -2,8 +2,9 @@ import XCTest
 
 final class ProtocolTests: XCTestCase {
 
-    func testProtocolVersionIs2() {
-        XCTAssertEqual(ExternalScreenConstants.protocolVersion, 2)
+    func testProtocolVersionIs3() {
+        // v3: displayConfig gained the rotation field
+        XCTAssertEqual(ExternalScreenConstants.protocolVersion, 3)
     }
 
     func testNetworkConstants() {
@@ -88,5 +89,30 @@ final class ProtocolTests: XCTestCase {
         let decodedConfig = DisplayConfigMessage.from(data: config.toData())
         XCTAssertEqual(decodedConfig?.width, 1440)
         XCTAssertEqual(decodedConfig?.height, 1005)
+        XCTAssertEqual(decodedConfig?.rotation, 0)
+    }
+
+    func testDisplayConfigRoundTripsRotation() {
+        let config = DisplayConfigMessage(width: 2234, height: 3456, refreshRate: 60.0, rotation: 90)
+        XCTAssertEqual(config.toData().count, DisplayConfigMessage.size)
+        let decoded = DisplayConfigMessage.from(data: config.toData())
+        XCTAssertEqual(decoded?.width, 2234)
+        XCTAssertEqual(decoded?.height, 3456)
+        XCTAssertEqual(decoded?.rotation, 90)
+    }
+
+    func testDisplayConfigParsesLegacy12BytePayload() {
+        // Pre-rotation hosts send 12-byte configs; rotation must default to 0.
+        let legacy = DisplayConfigMessage(width: 1440, height: 1005, refreshRate: 60.0, rotation: 270)
+            .toData()
+            .prefix(12)
+        let decoded = DisplayConfigMessage.from(data: Data(legacy))
+        XCTAssertEqual(decoded?.width, 1440)
+        XCTAssertEqual(decoded?.height, 1005)
+        XCTAssertEqual(decoded?.rotation, 0)
+    }
+
+    func testDisplayConfigRejectsShortData() {
+        XCTAssertNil(DisplayConfigMessage.from(data: Data(count: 11)))
     }
 }

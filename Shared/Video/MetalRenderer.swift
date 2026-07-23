@@ -31,6 +31,47 @@ final class MetalRenderer: NSObject {
     ]
     private var vertexBuffer: MTLBuffer?
 
+    /// Clockwise rotation applied when rendering the stream (0/90/180/270 degrees).
+    /// Guarded by `textureLock` alongside `currentTexture` — set from the transport's
+    /// background queue on displayConfig, read in `draw(in:)`.
+    private var rotationDegrees: Int = 0
+
+    /// Full-screen quad with texture coordinates permuted so the stream appears
+    /// rotated clockwise by `degrees` on the drawable. Layout: x, y, u, v per vertex,
+    /// triangle-strip order BL, BR, TL, TR.
+    private static func quadVertices(rotatedBy degrees: Int) -> [Float] {
+        switch degrees {
+        case 90:
+            return [
+                -1.0, -1.0, 1.0, 1.0,
+                 1.0, -1.0, 1.0, 0.0,
+                -1.0,  1.0, 0.0, 1.0,
+                 1.0,  1.0, 0.0, 0.0
+            ]
+        case 180:
+            return [
+                -1.0, -1.0, 1.0, 0.0,
+                 1.0, -1.0, 0.0, 0.0,
+                -1.0,  1.0, 1.0, 1.0,
+                 1.0,  1.0, 0.0, 1.0
+            ]
+        case 270:
+            return [
+                -1.0, -1.0, 0.0, 0.0,
+                 1.0, -1.0, 0.0, 1.0,
+                -1.0,  1.0, 1.0, 0.0,
+                 1.0,  1.0, 1.0, 1.0
+            ]
+        default:
+            return [
+                -1.0, -1.0, 0.0, 1.0,
+                 1.0, -1.0, 1.0, 1.0,
+                -1.0,  1.0, 0.0, 0.0,
+                 1.0,  1.0, 1.0, 0.0
+            ]
+        }
+    }
+
     // Cursor overlay state (Mac receiver mode)
     private var cursorPipelineState: MTLRenderPipelineState?
     private var cursorTexture: MTLTexture?
@@ -213,6 +254,19 @@ final class MetalRenderer: NSObject {
         framesSinceLastFlush = 0
     }
 
+    /// Sets the clockwise rotation applied when rendering (0/90/180/270 degrees).
+    /// Values that aren't multiples of 90 are ignored.
+    func setRotation(_ degrees: Int) {
+        let normalized = ((degrees % 360) + 360) % 360
+        guard normalized % 90 == 0 else {
+            print("MetalRenderer: Ignoring unsupported rotation \(degrees)")
+            return
+        }
+        textureLock.lock()
+        rotationDegrees = normalized
+        textureLock.unlock()
+    }
+
     /// Sets the cursor image from PNG data. Hotspot is in image pixel coordinates.
     func setCursorImage(pngData: Data, hotspotX: Float, hotspotY: Float) {
         do {
@@ -256,6 +310,7 @@ extension MetalRenderer: MTKViewDelegate {
     func draw(in view: MTKView) {
         textureLock.lock()
         let texture = currentTexture
+        let rotation = rotationDegrees
         textureLock.unlock()
 
         guard let texture = texture else { return }
@@ -269,7 +324,12 @@ extension MetalRenderer: MTKViewDelegate {
         guard let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else { return }
 
         renderEncoder.setRenderPipelineState(pipelineState)
-        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        if rotation == 0 {
+            renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        } else {
+            let rotatedVertices = Self.quadVertices(rotatedBy: rotation)
+            renderEncoder.setVertexBytes(rotatedVertices, length: rotatedVertices.count * MemoryLayout<Float>.stride, index: 0)
+        }
         renderEncoder.setFragmentTexture(texture, index: 0)
         renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
 
@@ -282,28 +342,44 @@ extension MetalRenderer: MTKViewDelegate {
         cursorLock.unlock()
 
         if cVisible, let cTexture = cTexture, let cursorPipeline = cursorPipelineState {
-            let drawableW = Float(view.drawableSize.width)
-            let drawableH = Float(view.drawableSize.height)
+            // Cursor position/hotspot are in STREAM space (the host display's pixel
+            // grid, matching the video texture), not drawable space — with rotation
+            // the two differ (portrait stream on a landscape drawable). Build the
+            // cursor quad in normalized stream coordinates, then map each corner
+            // through the same rotation as the video quad so the overlay stays
+            // attached to the content and rotates with it.
+            let streamW = Float(texture.width)
+            let streamH = Float(texture.height)
             let cursorW = Float(cTexture.width)
             let cursorH = Float(cTexture.height)
 
-            // Top-left of cursor quad in drawable pixels
-            let px = cPos.x * drawableW - cHotspot.x
-            let py = cPos.y * drawableH - cHotspot.y
+            // Top-left of cursor quad in stream pixels
+            let px = cPos.x * streamW - cHotspot.x
+            let py = cPos.y * streamH - cHotspot.y
 
-            // Convert to NDC (y flipped: NDC +1 is top)
-            let x0 = (px / drawableW) * 2 - 1
-            let x1 = ((px + cursorW) / drawableW) * 2 - 1
-            let y0 = 1 - (py / drawableH) * 2
-            let y1 = 1 - ((py + cursorH) / drawableH) * 2
-
-            // Same layout as `vertices`: x, y, u, v — triangle strip
-            let cursorVertices: [Float] = [
-                x0, y1, 0.0, 1.0,  // Bottom-left
-                x1, y1, 1.0, 1.0,  // Bottom-right
-                x0, y0, 0.0, 0.0,  // Top-left
-                x1, y0, 1.0, 0.0   // Top-right
+            // Corners in normalized stream space with their texture coordinates.
+            // Triangle-strip order: TL, TR, BL, BR.
+            let corners: [(nx: Float, ny: Float, u: Float, v: Float)] = [
+                (px / streamW, py / streamH, 0.0, 0.0),
+                ((px + cursorW) / streamW, py / streamH, 1.0, 0.0),
+                (px / streamW, (py + cursorH) / streamH, 0.0, 1.0),
+                ((px + cursorW) / streamW, (py + cursorH) / streamH, 1.0, 1.0)
             ]
+
+            var cursorVertices: [Float] = []
+            cursorVertices.reserveCapacity(16)
+            for corner in corners {
+                let vx: Float
+                let vy: Float
+                switch rotation {
+                case 90:  (vx, vy) = (1 - corner.ny, corner.nx)
+                case 180: (vx, vy) = (1 - corner.nx, 1 - corner.ny)
+                case 270: (vx, vy) = (corner.ny, 1 - corner.nx)
+                default:  (vx, vy) = (corner.nx, corner.ny)
+                }
+                // Convert to NDC (y flipped: NDC +1 is top)
+                cursorVertices.append(contentsOf: [vx * 2 - 1, 1 - vy * 2, corner.u, corner.v])
+            }
 
             renderEncoder.setRenderPipelineState(cursorPipeline)
             renderEncoder.setVertexBytes(cursorVertices, length: cursorVertices.count * MemoryLayout<Float>.stride, index: 0)

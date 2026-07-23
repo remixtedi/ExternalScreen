@@ -72,6 +72,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// UserDefaults key controlling whether receiver standby auto-starts (default: on).
     private static let receiverEnabledKey = "receiverEnabled"
 
+    /// UserDefaults key for the Mac-receiver render rotation in degrees (default: 0).
+    private static let displayRotationKey = "displayRotation"
+
+    /// Clockwise rotation (0/90/180/270°) applied to Mac receiver sessions. The virtual
+    /// display is created with swapped dimensions for 90/270 and the receiver rotates the
+    /// decoded stream back onto its panel — macOS can't rotate a virtual display itself,
+    /// so this is implemented in the render path. iPad sessions ignore it (the iPad
+    /// handles orientation itself via orientationChange).
+    private var displayRotation: Int = 0
+    private var rotationMenuItems: [NSMenuItem] = []
+
+    /// Last capabilities received from the connected Mac receiver; kept so a rotation
+    /// change mid-session can re-run the capabilities-driven reconfiguration.
+    private var lastReceiverCaps: DisplayCapabilitiesMessage?
+
     // State
     private var isRunning = false
     private var frameNumber: UInt32 = 0
@@ -113,6 +128,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
 
         UserDefaults.standard.register(defaults: [Self.receiverEnabledKey: true])
+        let storedRotation = UserDefaults.standard.integer(forKey: Self.displayRotationKey)
+        displayRotation = [0, 90, 180, 270].contains(storedRotation) ? storedRotation : 0
 
         setupStatusBarItem()
         initializeComponents()
@@ -177,6 +194,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         presetMenuItem.submenu = presetMenu
         menu.addItem(presetMenuItem)
 
+        // Rotation submenu (Mac receiver sessions only; see displayRotation)
+        let rotationMenu = NSMenu()
+        rotationMenuItems.removeAll()
+        for degrees in [0, 90, 180, 270] {
+            let item = NSMenuItem(
+                title: degrees == 0 ? "Standard" : "\(degrees)°",
+                action: #selector(selectRotation(_:)),
+                keyEquivalent: ""
+            )
+            item.target = self
+            item.tag = degrees
+            item.state = (degrees == displayRotation) ? .on : .off
+            rotationMenuItems.append(item)
+            rotationMenu.addItem(item)
+        }
+
+        let rotationMenuItem = NSMenuItem(title: "Rotation", action: nil, keyEquivalent: "")
+        rotationMenuItem.submenu = rotationMenu
+        menu.addItem(rotationMenuItem)
+
         receiversMenu = NSMenu()
         let receiversMenuItem = NSMenuItem(title: "Connect to Mac", action: nil, keyEquivalent: "")
         receiversMenuItem.submenu = receiversMenu
@@ -229,6 +266,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Reinitialize components with new preset so they're ready when we start
             log("selectPreset: Reinitializing components with new preset...")
             reinitializeComponentsWithCurrentPreset()
+        }
+    }
+
+    @objc private func selectRotation(_ sender: NSMenuItem) {
+        let degrees = sender.tag
+        guard [0, 90, 180, 270].contains(degrees), degrees != displayRotation else { return }
+
+        displayRotation = degrees
+        UserDefaults.standard.set(degrees, forKey: Self.displayRotationKey)
+        for item in rotationMenuItems {
+            item.state = (item.tag == degrees) ? .on : .off
+        }
+        log("selectRotation: \(degrees)°")
+
+        // Live-apply to an active Mac receiver session by re-running the
+        // capabilities-driven reconfiguration with the stored capabilities.
+        if targetKind == .macReceiver, let caps = lastReceiverCaps, let transport = networkTransport {
+            log("selectRotation: Reconfiguring active Mac receiver session")
+            handleDisplayCapabilities(caps, from: transport)
         }
     }
 
@@ -621,6 +677,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             networkTransport = nil
             targetKind = .iPad
             connectedReceiverName = nil
+            lastReceiverCaps = nil
             isConnectingToReceiver = false
             cursorStreamer.stop()
             // Keep virtual display active to preserve position settings
@@ -649,6 +706,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             networkTransport = nil
             targetKind = .iPad
             connectedReceiverName = nil
+            lastReceiverCaps = nil
             isConnectingToReceiver = false
             cursorStreamer.stop()
             // Keep virtual display active to preserve position settings
@@ -743,9 +801,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
                     h264Encoder.stop()
 
-                    let w = Int(caps.pixelWidth)
-                    let h = Int(caps.pixelHeight)
+                    self.lastReceiverCaps = caps
+
+                    // For 90°/270° rotation the virtual display is created PORTRAIT
+                    // (receiver dims swapped); the receiver rotates the decoded stream
+                    // back onto its landscape panel, filling it exactly.
+                    let rotated = displayRotation == 90 || displayRotation == 270
+                    let w = Int(rotated ? caps.pixelHeight : caps.pixelWidth)
+                    let h = Int(rotated ? caps.pixelWidth : caps.pixelHeight)
                     let scale = CGFloat(caps.scale)
+                    if displayRotation != 0 {
+                        log("handleDisplayCapabilities: rotation \(displayRotation)° -> virtual display \(w)x\(h)")
+                    }
 
                     // The virtual display's CGVirtualDisplayMode is created at the
                     // receiver's LOGICAL (point) size with hiDPI backing -- see
@@ -768,6 +835,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         networkTransport = nil
                         targetKind = .iPad
                         connectedReceiverName = nil
+                        lastReceiverCaps = nil
                         reinitializeComponentsWithCurrentPreset()
                         if !virtualDisplayManager.isActive {
                             virtualDisplayManager.start()
@@ -803,9 +871,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     activeTransport.resetFlowControl()
 
                     let config = DisplayConfigMessage(
-                        width: caps.pixelWidth,
-                        height: caps.pixelHeight,
-                        refreshRate: Float(ExternalScreenConstants.defaultRefreshRate)
+                        width: UInt32(w),
+                        height: UInt32(h),
+                        refreshRate: Float(ExternalScreenConstants.defaultRefreshRate),
+                        rotation: UInt32(displayRotation)
                     )
                     activeTransport.sendMessage(type: .displayConfig, payload: config.toData())
 
@@ -1008,6 +1077,7 @@ extension AppDelegate: FrameTransportDelegate {
             networkTransport = nil
             targetKind = .iPad
             connectedReceiverName = nil
+            lastReceiverCaps = nil
             isConnectingToReceiver = false
             cursorStreamer.stop()
         }

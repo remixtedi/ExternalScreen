@@ -67,7 +67,8 @@ public enum ExternalScreenConstants {
     public static let networkKeyframeInterval: Int = 60
 
     /// Protocol version for compatibility checking
-    public static let protocolVersion: UInt32 = 2
+    /// v3: displayConfig gained a rotation field (receiver-side render rotation)
+    public static let protocolVersion: UInt32 = 3
 
     /// TCP port for Mac-to-Mac communication over Thunderbolt Bridge
     public static let networkPort: UInt16 = 2346
